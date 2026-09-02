@@ -1,6 +1,6 @@
 # Delta State
 
-Last updated: 2026-09-02
+Last updated: 2026-09-02 (Phase 7 blocked at wallet funding gate)
 
 ## Completed
 
@@ -94,6 +94,14 @@ Last updated: 2026-09-02
 - Announcement candidates include Aaga `content_generation` (`019d7c71-44c9-7329-bcf6-3edb953d6711`), 0.01 USDC fixed, 5 minutes, and GSB Thread Writer `write_thread` (`019d780b-0b26-7966-b540-28ea9c05a0b7`), 0.10 USDC fixed, 5 minutes. Both support Base. Aaga requires `topic` and `content_type`, with `press_release`, `social_media_post`, and `marketing_copy` among the declared content types.
 - Translation returned OpenClaw Chile `Translation Service EN/ES/PT` (`01a0541e-e520-7c8c-90ce-b0b593c2b419`), 8 USDC fixed, 1440 minutes, with Base support. Its live requirements are the string schema `{"source_lang,target_lang,words,format}` and its deliverable is `{"format":"MD + supporting files","fields":["main","variants"]}`.
 - Provider public wallet addresses, offering IDs, chain IDs, prices, requirement schemas, deliverables, SLA values, `requiredFunds`, and `isHidden` were read from the live response. The response did not expose a separate online flag, transaction identity, job identity, or lifecycle data.
+
+## Phase 7 funding gate (2026-09-02 22:15 UTC)
+
+- Delta agent EVM wallet `0x702ab9ecfb9f87f52e79157b2ea6a929b60ec576` was funded with `0.0005 ETH` for gas (no transaction history observed — appears to be a pre-allocated balance from the ACP wallet provider).
+- No USDC and no USDC.e balance on Base mainnet at block 50799003. Blockscout shows zero incoming ERC-20 transfers. Native USDC `eth_call` returns empty.
+- **Phase 7 live job creation is BLOCKED.** `acp client create-job` on Base will revert because escrow cannot be funded.
+- Owner (Kyami) reported funding was sent but it did not land. Likely causes: tx not yet broadcast, wrong address, or wrong asset. Re-verification needed before Phase 7 can run.
+- Required for Phase 7: ≥ 0.02 USDC (or USDC.e) on Base 8453 at Delta wallet, plus existing 0.0005 ETH gas.
 
 ## Unverified
 

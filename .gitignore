@@ -1,0 +1,59 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Sibyl local memory database (hackathon project)
+.delta/
+
+# Node / ACP CLI (per-session, encrypted keychain backend file)
+.node_modules/
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local evidence bundle (kept outside source control unless sanitized)
+.evidence/
+*.log
+.env.local
+.local/
+
+# Generated artifacts
+artifacts/
+artifacts_tmp/
+*.art.json
+*.art.svg
+
+# Test fixtures that may carry sample provider output
+tests/_artifacts/
+tests/fixtures/_artifacts/
