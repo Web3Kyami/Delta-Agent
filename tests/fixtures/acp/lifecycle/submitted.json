@@ -1,0 +1,12 @@
+{
+  "fixture": true,
+  "jobId": "fixture-job-42",
+  "providerId": "fixture-provider",
+  "offeringId": "fixture-offering",
+  "chainId": 8453,
+  "status": "submitted",
+  "deliverable": {
+    "type": "text",
+    "value": "Fixture deliverable. Not live provider evidence."
+  }
+}

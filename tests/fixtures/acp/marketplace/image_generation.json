@@ -1,0 +1,53 @@
+{
+  "fixture": true,
+  "data": [
+    {
+      "id": "fixture-provider-image",
+      "name": "Fixture Image Provider",
+      "walletAddress": "0x1111111111111111111111111111111111111111",
+      "role": "HYBRID",
+      "cluster": "OPENCLAW",
+      "rating": "5.00",
+      "chains": [
+        {
+          "chainId": 8453,
+          "tokenAddress": null,
+          "active": true
+        }
+      ],
+      "offerings": [
+        {
+          "id": "fixture-offering-image",
+          "agentId": "fixture-provider-image",
+          "name": "ai_image_generation",
+          "requirements": {
+            "type": "object",
+            "required": ["prompt"],
+            "properties": {
+              "prompt": {"type": "string"},
+              "width": {"type": "number"}
+            }
+          },
+          "deliverable": "string",
+          "slaMinutes": 5,
+          "priceType": "fixed",
+          "priceValue": 0.05,
+          "requiredFunds": false,
+          "isHidden": false
+        },
+        {
+          "id": "fixture-offering-layered",
+          "agentId": "fixture-provider-image",
+          "name": "layered_visual_pack",
+          "requirements": "Required source image HTTPS URL and user instruction",
+          "deliverable": "Preview PNG plus artifact references",
+          "slaMinutes": 30,
+          "priceType": "fixed",
+          "priceValue": 2,
+          "requiredFunds": false,
+          "isHidden": false
+        }
+      ]
+    }
+  ]
+}

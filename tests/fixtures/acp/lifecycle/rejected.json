@@ -1,0 +1,8 @@
+{
+  "fixture": true,
+  "jobId": "fixture-job-42",
+  "providerId": "fixture-provider",
+  "offeringId": "fixture-offering",
+  "chainId": 8453,
+  "status": "rejected"
+}

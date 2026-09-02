@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Delta revision planning and paid-work continuity demonstration">
+    <title>Delta | Revision control for paid work</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to workflow</a>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="/" aria-label="Delta home"><span class="brand-mark">D</span><span>delta</span></a>
+        <div class="mode-badge"><span class="mode-dot" aria-hidden="true"></span>Local fixture mode</div>
+      </div>
+    </header>
+
+    <main id="main-content" class="shell">
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">Revision control for paid agent work</p>
+        <h1 id="page-title">Keep the work that still matches.</h1>
+        <p class="lede">Preview what Delta can reuse, what needs to run again, and what is waiting for a dependency. Every decision is tied to the inputs and state stored in Sibyl.</p>
+      </section>
+
+      <div id="error-summary" class="notice notice-error" role="alert" tabindex="-1" hidden></div>
+      <div id="live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <section class="workspace-grid" aria-label="Delta workflow workspace">
+        <form id="workflow-form" class="panel inputs-panel" novalidate>
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">01 / Scope</p>
+              <h2>Shape the revision</h2>
+            </div>
+            <span class="source-tag">Server validated</span>
+          </div>
+          <p class="panel-copy">These inputs define the launch-package workflow. Change one field, then preview the effect before running anything.</p>
+
+          <div class="field-group scope-field">
+            <label for="project-id">Project ID <span class="required">Required</span></label>
+            <input id="project-id" name="project_id" type="text" value="launch-demo" autocomplete="off" aria-describedby="project-help">
+            <p id="project-help" class="helper">Use letters, numbers, dots, underscores, colons, or hyphens.</p>
+          </div>
+
+          <div class="form-fields">
+            <div class="field-group field-wide">
+              <label for="description">Product description <span class="required">Required</span></label>
+              <textarea id="description" name="description" rows="4" aria-describedby="description-help">A compact solar charger for remote workdays</textarea>
+              <p id="description-help" class="helper">Shared by the visual and announcement steps.</p>
+            </div>
+            <div class="field-group field-wide">
+              <label for="brief">Visual brief <span class="required">Required</span></label>
+              <textarea id="brief" name="brief" rows="4">Clean studio product shot, warm daylight, generous negative space</textarea>
+              <p class="helper">Used only by the product visual step.</p>
+            </div>
+            <div class="field-group">
+              <label for="launch-date">Launch date <span class="required">Required</span></label>
+              <input id="launch-date" name="launch_date" type="date" value="2026-09-10">
+            </div>
+            <div class="field-group">
+              <label for="target-language">Target language <span class="required">Required</span></label>
+              <input id="target-language" name="target_language" type="text" value="de" autocomplete="language" aria-describedby="language-help">
+              <p id="language-help" class="helper">Use a language code such as de or fr.</p>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button id="preview-button" class="button button-primary" type="submit">Preview revision <span aria-hidden="true">↗</span></button>
+            <button id="restore-button" class="button button-secondary" type="button">Restore saved work</button>
+          </div>
+          <p class="action-note">Preview reads and writes the revision plan through Sibyl. It does not create a job or spend funds.</p>
+        </form>
+
+        <section class="panel readout-panel" aria-labelledby="readout-title">
+          <div class="panel-heading readout-heading">
+            <div>
+              <p class="section-kicker">02 / Readout</p>
+              <h2 id="readout-title">Revision preview</h2>
+            </div>
+            <span id="readout-state" class="status-pill status-idle">Idle</span>
+          </div>
+
+          <div id="recovery-banner" class="recovery-banner" hidden>
+            <span class="recovery-icon" aria-hidden="true">↻</span>
+            <div><strong>Sibyl-backed state loaded</strong><span id="recovery-message">This project can be recovered by a fresh process.</span></div>
+          </div>
+
+          <div class="cost-strip">
+            <div><span class="metric-label">Estimated additional service cost</span><strong id="estimated-cost">Unknown</strong></div>
+            <div><span class="metric-label">Source</span><span id="cost-source">No preview yet</span></div>
+            <div><span class="metric-label">Plan</span><span id="plan-id" class="token-value">Not created</span></div>
+            <div><span class="metric-label">Actual service cost</span><strong id="actual-cost">Not recorded</strong></div>
+          </div>
+
+          <div id="steps" class="steps-list" aria-live="polite">
+            <div class="empty-readout"><span class="empty-icon" aria-hidden="true">○</span><strong>Preview the current inputs</strong><span>Delta will explain each step and keep unknown provider data unknown.</span></div>
+          </div>
+
+          <div class="execution-actions">
+            <div>
+              <p class="section-kicker">03 / Execution</p>
+              <h3>Run only what the preview requires</h3>
+            </div>
+            <button id="execute-button" class="button button-primary" type="button" aria-describedby="execution-note" disabled>Execute deterministic workflow</button>
+          </div>
+          <p id="execution-note" class="action-note">Execution is disabled until this exact input set has a current preview.</p>
+        </section>
+      </section>
+
+      <section class="lower-grid" aria-label="Execution safeguards and state vocabulary">
+        <section class="panel safeguard-panel" aria-labelledby="safeguard-title">
+          <div class="panel-heading">
+            <div><p class="section-kicker">04 / Safeguards</p><h2 id="safeguard-title">Live actions stay explicit</h2></div>
+            <span class="source-tag source-muted">No live job</span>
+          </div>
+          <p class="panel-copy">This demonstration uses labelled deterministic fixtures. Live ACP actions remain unavailable until a real provider, quote, chain, and approval are attached.</p>
+          <div class="action-stack">
+            <div class="guard-row">
+              <div><strong>Spending approval</strong><span>Required before any paid ACP action.</span></div>
+              <button class="button button-disabled" type="button" disabled aria-describedby="spend-disabled-note">Unavailable in fixture mode</button>
+            </div>
+            <div class="guard-row">
+              <div><strong>Reconcile a provider job</strong><span>Requires a persisted live job identity.</span></div>
+              <button class="button button-disabled" type="button" disabled>Unavailable in fixture mode</button>
+            </div>
+            <div class="guard-row">
+              <div><strong>Approve deliverable and settle</strong><span>Settlement releases provider escrow.</span></div>
+              <button class="button button-disabled" type="button" disabled>Unavailable in fixture mode</button>
+            </div>
+          </div>
+          <p id="spend-disabled-note" class="action-note">No provider output, wallet action, or transaction is represented here.</p>
+        </section>
+
+        <section class="panel vocabulary-panel" aria-labelledby="vocabulary-title">
+          <div class="panel-heading"><div><p class="section-kicker">05 / Vocabulary</p><h2 id="vocabulary-title">States Delta can show</h2></div></div>
+          <p class="panel-copy">The current cards are driven by API and Sibyl state. These labels are the recovery vocabulary, not a progress simulation.</p>
+          <div class="state-grid">
+            <span class="state-chip state-idle">Idle</span>
+            <span class="state-chip state-reuse">Reuse</span>
+            <span class="state-chip state-rerun">Rerun</span>
+            <span class="state-chip state-pending">Pending dependency</span>
+            <span class="state-chip state-awaiting">Awaiting approval</span>
+            <span class="state-chip state-awaiting">Awaiting quote</span>
+            <span class="state-chip state-provider">Funded / awaiting provider</span>
+            <span class="state-chip state-provider">Deliverable ready</span>
+            <span class="state-chip state-awaiting">Awaiting settlement</span>
+            <span class="state-chip state-complete">Complete</span>
+            <span class="state-chip state-failure">Failure</span>
+            <span class="state-chip state-failure">Expired</span>
+            <span class="state-chip state-failure">Rejected</span>
+            <span class="state-chip state-ambiguous">Ambiguous</span>
+            <span class="state-chip state-ambiguous">Reconciliation required</span>
+            <span class="state-chip state-unavailable">Artifact unavailable</span>
+          </div>
+        </section>
+      </section>
+    </main>
+    <footer class="site-footer"><div class="shell"><span>Delta</span><span>Decisions from real inputs. State from Sibyl.</span></div></footer>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
