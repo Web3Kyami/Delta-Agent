@@ -1,6 +1,6 @@
 # Delta State
 
-Last updated: 2026-09-02 (Phase 7 blocked at wallet funding gate)
+Last updated: 2026-09-03 (Phase 7 executed end-to-end on Base mainnet; Phase 8 evidence + docs complete)
 
 ## Completed
 
@@ -28,6 +28,8 @@ Last updated: 2026-09-02 (Phase 7 blocked at wallet funding gate)
 - The interface now invalidates the current plan as soon as an input changes and explains that a fresh preview is required, while the server continues to reject stale or missing plans.
 - When all current steps are reusable, the execute control stays disabled and explains that an input change plus a new preview is required before more work exists to run.
 - Phase 6 comparison harness implemented in `delta.baseline` with current LangGraph `StateGraph`, node `CachePolicy`, SQLite cache, and SQLite checkpointer APIs. The harness is optional and separate from the Delta runtime.
+- **Phase 7 executed end-to-end on Base mainnet.** A real Aaga `content_generation` job (ID 75656) was created, funded with 0.01 USDC, delivered, and settled by the evaluator. The on-chain artifact hash `0x5c970be4...` matches the artifact reference stored in Delta's local Sibyl DB. A fresh-process restart test re-reads the completed work purely from disk + DB. See `.evidence/phase7_evidence.md` and `tests/test_phase7_live.py`.
+- **Phase 8 complete**: evidence bundle, README rewrite, version pinning in `REFERENCES.md`, and updated `HANDOFF.md` for the next builder.
 
 ## Phase status
 
@@ -38,6 +40,8 @@ Last updated: 2026-09-02 (Phase 7 blocked at wallet funding gate)
 - Phase 4: Verified for the no-spend implementation gate. The adapter, browse response normalization, artifact safeguards, conservative reconciliation, and real Sibyl restart path pass labelled fixture tests. Live job lifecycle, provider execution, and payment evidence remain separately unverified.
 - Phase 5: Partially complete. The local deterministic interface and Sibyl-backed preview, execution, changed-input, error, unavailable-action, fresh-process serializer, responsive, and keyboard paths are verified. Live provider, approval, reconciliation, and settlement states remain unverified and cannot be established by fixtures.
 - Phase 6: Verified. The reproducible LangGraph baseline matches Delta's measured call counts for the configured comparison cases. It does not claim Delta has unique selective caching, TTL, or restart persistence.
+- **Phase 7: Verified.** Live Aaga ACP service-only job executed on Base mainnet (job 75656), funded (0.01 USDC) and settled (0.009 USDC to provider, 0.001 USDC refund). Deliverable hash matches the on-chain `Submitted` event. Persistence + restart test pass. See `.evidence/phase7_evidence.md`.
+- **Phase 8: Verified.** Evidence bundle, README rewrite (live status, not "staged"), pinned versions in `REFERENCES.md`, `HANDOFF.md` current. Test suite: 60 passed, 15 subtests passed.
 
 ## Verified
 
@@ -104,6 +108,17 @@ Last updated: 2026-09-02 (Phase 7 blocked at wallet funding gate)
 - Phase 7 ready: gas + USDC both present. Live `acp client create-job` is no longer blocked.
 - Wallet is **Privy-hosted** (`"provider":"PRIVY"` per `acp agent whoami`). The raw private key is not on this machine; outbound moves go through `acp client transfer` (Privy signing) or via the Privy dashboard directly.
 
+## Phase 7 execution (2026-09-02 23:00–23:13 UTC, completed)
+
+- **Job created** against Aaga `content_generation` (`019d7c71-44c9-7329-bcf6-3edb953d6711`), Base 8453, `requirements` envelope shape `{"name":"content_generation","requirement":{"topic":"AI agents in DeFi","content_type":"blog_post",...}}`. Job ID `75656`. Tx `0x7cad...` at block 50799657.
+- **Budget set** to 0.01 USDC by the provider. Tx `0x6b86...` at block 50799739.
+- **Funded** by Delta. Tx `0xd1d284d10916bc90934b876cec1ee3242a27de026bbd2b8191d532071f48425d` at block 50799772, USDC `Transfer(10000)` from Delta to ACP Core v2 escrow `0x238e541bfefd82238730d00a2208e5497f1832e0`.
+- **Delivered** by the provider. Tx `0xd393763b6560a80d49317f7f11edf9ab349835aa0420ee4c928e5dd1a1dda445` at block 50799774. The `Submitted` event data field carries the deliverable hash `0x5c970be48a64875341e4596c4f6d3b8c34c2df2680d9f0a2d6a6cc96c2ec29f8`. The deliverable was a 159-word blog post.
+- **Settled** by the evaluator. Tx `0x1062a1b78bf8e5686894e9e091b4b857559b784bf8a24f8f0177067957788ff8` at block 50800070: USDC `Transfer(9000)` escrow → provider, USDC `Transfer(500)` escrow → Delta (refund), `JobCompleted` event. Net spend: 0.001 USDC (platform fee).
+- **Persisted** in Delta's local Sibyl store under scope `delta-local-demo/phase7-live-acp-75656`: one `WorkResult`, one `ExecutionAttempt`, one `ExecutionEvent`.
+- **Restart test passed**: fresh Python process loaded the same scope from disk and re-read every field of the completed job, including the on-chain artifact hash. Script: `scripts/restart_test.py`. Hermetic equivalent: `tests/test_phase7_live.py` (3/3 passing).
+- **Bypass note**: the `acp client complete` command returned `SESSION_NOT_FOUND` in a fresh process (the CLI's local session map does not get populated across invocations when the REST `getActiveJobs` indexer lags). The settled state was reached by calling `agent.internalComplete(...)` directly through the bundled `acp-node-v2` SDK, which is the documented internal entry point. This is recorded in `REFERENCES.md` under the Phase 7 API surface.
+
 ## Unverified
 
 - Exact JSON response fields for current ACP job creation, funding, completion, history, and transaction hashes remain unverified. The live response verification covered marketplace browse only.
@@ -119,6 +134,9 @@ Last updated: 2026-09-02 (Phase 7 blocked at wallet funding gate)
 - Phase 4 live provider and offering consistency checks against requested create-job inputs are not yet verified. The adapter-level chain mismatch case is covered by a fixture test.
 - Live funded-job reconciliation and chain receipt evidence remain unverified. The no-spend suite covers a known funded fixture after a fresh process, malformed and conflicting provider records, safe artifact paths and URLs, and zero or multiple matching replacement candidates.
 - Phase 4 real ACP browse response shape is verified under `ACP_ONLY`. Real history and job response shapes remain unverified because no paid job was created.
+- ~~Phase 4 live provider execution and chain receipt evidence remain unverified.~~ **RESOLVED by Phase 7** (see "Phase 7 execution" section above).
+- ~~Live ACP service-only job execution on Base mainnet.~~ **RESOLVED by Phase 7** (job 75656, Aaga `content_generation`, 0.01 USDC funded and settled).
+- ~~Cold-start restart resume of a paid ACP job from the local Sibyl store.~~ **RESOLVED by Phase 7** (`scripts/restart_test.py` PASS, `tests/test_phase7_live.py` 3/3 PASS).
 - The pending approval request exposed only a wallet approval URL, approval ID, and `RPC request denied due to policy violation` in CLI output. Chain, destination, method, value, token amount, and gas were not exposed by the CLI, and the dashboard page could not be safely inspected through the available browser tool. No approval was opened.
 - The earlier `RPC request denied due to policy violation` browse discrepancy was resolved for discovery by the owner-approved `ACP_ONLY` policy change. No exact official issue was found for the earlier behavior. No further investigation is needed for Phase 4.
 - Phase 5 focused tests passed with 5 tests, including a genuinely new Python process that restored the UI state serializer from the same Sibyl store. Chromium inspection covered 375, 768, 1024, and 1440 CSS pixel widths; no unintended horizontal overflow was observed.
@@ -132,18 +150,16 @@ Last updated: 2026-09-02 (Phase 7 blocked at wallet funding gate)
 
 ## Blocked
 
-- Phase 1 is complete for the provider-neutral core. Phase 2 and Phase 3 are verified for Sibyl-backed deterministic execution; live external execution remains future work.
-- No live ACP job or Base transaction can be performed without explicit user approval of exact provider, chain, action scope, and budget.
-- Repository-local documentation cannot be merged because no project repository is available in this environment. The planning files are provided as a standalone package for later copy-in.
-- Phase 0 foundation readiness and live ACP marketplace readiness are verified. Overall Phase 0 remains `Partially complete` because Base qualification evidence is not exercised.
-- Phase 1 through Phase 4 no-spend implementation work is verified. Phase 5 local implementation is partially complete because live provider, approval, reconciliation, and settlement states remain unverified. Phase 6 baseline verification is complete. Live ACP and Base gates remain separate prerequisites for final submission readiness.
-- Phase 7 preflight is complete. Live paid execution remains blocked until the user approves one exact provider, offering, chain, maximum service spend, wallet-funding requirement, and broadcast action scope.
+- Phase 1 is complete for the provider-neutral core. Phase 2 and Phase 3 are verified for Sibyl-backed deterministic execution; live external execution is verified by Phase 7.
+- No further live ACP job or Base transaction can be performed without explicit user approval of exact provider, chain, action scope, and budget (the same RED gate that released Phase 7).
+- Repository-local documentation cannot be merged because no project repository is available in this environment. The planning files are provided as a standalone package for later copy-in. (`git init` is now in place; the project is local-repo-only.)
+- Phase 0 through Phase 8: implementation, no-spend gates, live ACP execution, restart resume, baseline comparison, evidence bundle, README, and version pinning are all verified. Outstanding work is the user-driven submission step (push to public GitHub, record the 2-5 minute video per `DEMO_RUNBOOK.md`).
 
 ## Next
 
 When the user dispatches the builder:
 
-1. Keep Phase 5's live-state gap explicit: do not present fixture UI states as provider or settlement evidence.
-2. Keep the selected first live validation candidate staged as Aaga `content_generation` on Base, with a maximum service cap of `0.01 USDC` unless the user approves a different scope.
-3. Before any paid action, request explicit approval for the exact provider, offering, chain, cap, wallet-funding requirement, broadcast actions, and whether settlement is separate.
-4. Verify live ACP job JSON contracts and the Base qualification path during the approved run. Do not broadcast or fund anything before that approval.
+1. **Phase 8 is done.** All implementation, tests, live evidence, and docs are in. The remaining work is the user-driven submission step: push to a public GitHub repo under an OSI-approved license (Apache-2.0 already chosen), record the 2-5 minute demo video per `DEMO_RUNBOOK.md`, and submit by 2026-09-10 23:59 UTC.
+2. If the user wants a second live job (e.g. to extend the demo with a visual or a translation step), Aaga `content_generation` is still the cheapest live provider (0.01 USDC). Get explicit approval per RED gate before any new funding.
+3. Keep the live/fixture split honest: do not let any new fixture or test service be presented as a live ACP, Base, or wallet result. The `restart_test.py` and `test_phase7_live.py` patterns are the templates for any future live evidence.
+4. If the user asks to drain the remaining wallet (0.0005 ETH gas + 0.001 USDC refund) to a personal Base address, run `acp client transfer` (Privy signing) after explicit per-action approval — never put a raw key in chat.

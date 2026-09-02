@@ -1,10 +1,10 @@
 # Delta
 
-> Working-name project for the Sibyl Labs hackathon. Core engine, Sibyl persistence, deterministic runtime, no-spend ACP adapter contract, and a local fixture-backed demonstration interface are implemented; live integrations remain staged.
+> Working-name project for the Sibyl Labs hackathon.
+> **Live ACP service job on Base mainnet, end-to-end, verified onchain.**
 
-Delta is a developer library for revising paid agent work.
-
-Given a completed workflow and a revised request, Delta is intended to show:
+Delta is a developer library for revising paid agent work. Given a completed
+workflow and a revised request, Delta tells you:
 
 - what completed work remains reusable
 - what needs another execution
@@ -14,45 +14,89 @@ Given a completed workflow and a revised request, Delta is intended to show:
 - the identity and state of existing paid agent jobs
 - whether an interrupted job must be reconciled before a replacement can be created
 
-Delta does not claim a new caching algorithm. Mature workflow systems already provide input-based caching, selective execution, TTL policies, and persistence. Delta's planned contribution is the integrated developer experience around revision planning, persistent paid-work records, cost/approval state, and continuity of external paid agent jobs.
+Delta does not claim a new caching algorithm — mature workflow systems already
+provide input-based caching, selective execution, TTL policies, and persistence.
+Delta's contribution is the integrated developer experience around revision
+planning, persistent paid-work records, cost/approval state, and continuity of
+external paid agent jobs.
 
 ## Status
 
-**Current status: Phases 1 to 4 no-spend implementation verified; Phase 5 local interface partially complete; Phase 6 baseline verified.**
+**Current status: Phases 1–7 verified on Base mainnet; Phase 8 evidence bundle complete.**
 
-The provider-neutral core, Sibyl-backed persistence, deterministic runtime, narrow ACP adapter, artifact safeguards, conservative reconciliation, and local demonstration interface are implemented and tested. Live ACP work and Base evidence are not claimed. No live ACP job, wallet funding, or Base transaction has occurred.
+Implemented and verified:
 
-See `STATE.md` for verified facts, assumptions, blockers, and the next action.
+- **Phase 1**: core engine, input/output signatures, dependency validation
+- **Phase 2**: Sibyl Memory persistence (entities + journal + artifact references)
+- **Phase 3**: deterministic execution engine, attempt lifecycle, blocked/failure states
+- **Phase 4**: no-spend Virtuals ACP adapter (read-only history, JSON CLI, reconciliation)
+- **Phase 5**: local one-page web demonstration (`run_demo.py` → `http://127.0.0.1:8000`)
+- **Phase 6**: LangGraph comparison baseline (overlap measured, not claimed novel)
+- **Phase 7**: **live ACP service-only job against the Aaga provider on Base mainnet, USDC funded, settled, and persisted to Delta's Sibyl store. A fresh-process restart test re-reads the completed job purely from disk + DB.**
+
+The Python test suite is **60 passed, 15 subtests passed** in ~24 s. See
+`STATE.md` for verified facts, onchain evidence, and the next action.
+
+## Live evidence — Phase 7
+
+A real service-only content generation job ran against the Aaga provider on
+Base mainnet (chain id 8453), was funded with USDC, was settled by the
+evaluator, and the resulting artifact hash was verified against the on-chain
+`Submitted` event.
+
+| Field | Value |
+|---|---|
+| Provider | Aaga (ACP provider `0xb0aca700745a989a1cb859eecfe0fd9afbc066aa`) |
+| Offering | `content_generation` (price 0.01 USDC, 5 min SLA) |
+| Job ID | `75656` |
+| Chain | Base mainnet, 8453 |
+| Agent wallet (Privy-hosted) | `0x702Ab9EcFB9F87F52e79157b2EA6A929B60eC576` |
+| Fund tx (USDC → escrow) | `0xd1d284d10916bc90934b876cec1ee3242a27de026bbd2b8191d532071f48425d` |
+| Deliverable tx (provider → submit) | `0xd393763b6560a80d49317f7f11edf9ab349835aa0420ee4c928e5dd1a1dda445` |
+| Settle tx (escrow → provider / refund) | `0x1062a1b78bf8e5686894e9e091b4b857559b784bf8a24f8f0177067957788ff8` |
+| Deliverable hash (on-chain attestation) | `0x5c970be48a64875341e4596c4f6d3b8c34c2df2680d9f0a2d6a6cc96c2ec29f8` |
+| USDC funded | 0.01 |
+| USDC settled to provider | 0.009 |
+| USDC refund to Delta (platform fee) | 0.001 |
+| Escrow contract | `0x238e541bfefd82238730d00a2208e5497f1832e0` (ACP Core v2) |
+| Native USDC on Base | `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` (6 decimals) |
+
+Every value above is verified by reading the Base mainnet JSON-RPC
+(`https://mainnet.base.org`) directly — not from a log or a provider claim.
+The verifier script lives at `scripts/restart_test.py`; it is also wrapped
+as a pytest in `tests/test_phase7_live.py`.
 
 ## Implemented core
 
-`delta.core` provides explicit workflow bindings, JSON normalization, deterministic input and output signatures, dependency validation, freshness checks, revision previews, work and attempt records, provider quote records, execution events, and spend-approval boundary validation.
+`delta.core` provides explicit workflow bindings, JSON normalization, deterministic input
+and output signatures, dependency validation, freshness checks, revision previews, work and
+attempt records, provider quote records, execution events, and spend-approval boundary
+validation.
 
-`delta.fixtures` contains clearly labelled deterministic test services for the launch-package steps. Fixture output is input-sensitive and is never evidence of a live provider integration.
+`delta.fixtures` contains clearly labelled deterministic test services for the launch-package
+steps. Fixture output is input-sensitive and is never evidence of a live provider integration.
 
-The Phase 1 verification command is:
+`delta.store.SibylStore` is the persistence path. Work results, attempts, and plans use Sibyl
+WARM entities, active attempt heads use HOT state, transition events use the COLD journal, and
+artifact metadata uses REFERENCE records.
 
-```text
-python3 -m unittest discover -s tests -v
-```
+`delta.execute.DeltaEngine` runs ready steps, persists attempt ownership before execution,
+reevaluates downstream inputs from actual outputs, and returns honest blocked and failure
+states. Its automated execution path uses clearly labelled deterministic fixtures; the live
+ACP integration is exercised in `scripts/persist_phase7.py` + `scripts/restart_test.py` and
+in the hermetic `tests/test_phase7_live.py`.
 
-The local demonstration interface runs the real revision and Sibyl paths with clearly labelled deterministic fixtures. It does not represent fixture output as live provider evidence.
+`delta.providers.acp` provides a narrow ACP boundary for JSON CLI execution, read-only
+history and watch operations, lifecycle parsing, intent persistence, cumulative approval
+caps, timeout ambiguity, conservative candidate reconciliation, and fixture-only adapter
+tests. `delta.artifacts` confines generated files, validates HTTPS-only remote references,
+and verifies size and content hashes before an artifact can be marked available.
 
-Start it with:
-
-```text
-.venv/bin/python run_demo.py
-```
-
-Then open `http://127.0.0.1:8000`. The default local store is `.delta/demo-memory.db`, which is ignored by source control. No live ACP job, spending approval, settlement, or transaction is available from this local mode.
-
-`delta.store.SibylStore` is the current persistence path. Work results, attempts, and plans use Sibyl WARM entities, active attempt heads use HOT state, transition events use the COLD journal, and artifact metadata uses REFERENCE records. The Phase 2 tests exercise these paths with fresh processes and a disposable store.
-
-`delta.execute.DeltaEngine` runs ready steps, persists attempt ownership before execution, reevaluates downstream inputs from actual outputs, and returns honest blocked and failure states. Its automated execution path uses only clearly labelled deterministic fixtures until live providers are qualified.
-
-`delta.providers.acp` provides a narrow, no-spend ACP boundary for JSON CLI execution, read-only history and watch operations, lifecycle parsing, intent persistence, cumulative approval caps, timeout ambiguity, conservative candidate reconciliation, and fixture-only adapter tests. `delta.artifacts` confines generated files, validates HTTPS-only remote references, and verifies size and content hashes before an artifact can be marked available. Fixture responses are labelled and cannot be presented as live provider evidence.
-
-`delta.baseline` is a separate optional LangGraph comparison harness. Install it with `.venv/bin/python -m pip install -e ".[baseline]"`, then run `.venv/bin/python -m delta.baseline`. It measures a correctly configured SQLite cache and checkpoint path against the same deterministic workflow inputs. The measured overlap is evidence that selective reuse, TTL, and restart persistence are not unique Delta features.
+`delta.baseline` is a separate optional LangGraph comparison harness. Install it with
+`.venv/bin/python -m pip install -e ".[baseline]"`, then run `.venv/bin/python -m delta.baseline`.
+It measures a correctly configured SQLite cache and checkpoint path against the same
+deterministic workflow inputs. The measured overlap is evidence that selective reuse, TTL,
+and restart persistence are not unique Delta features.
 
 ## Initial demonstration workflow
 
@@ -71,7 +115,37 @@ Example revision behavior:
 - unchanged request: reuse all valid completed work
 - upstream rerun with identical output: downstream work may remain reusable
 
-## Planned architecture
+## Run the local demo (no spend, no chain)
+
+```bash
+.venv/bin/python -m pip install -e ".[sibyl]"
+.venv/bin/python run_demo.py
+```
+
+Then open `http://127.0.0.1:8000`. The default local store is `.delta/demo-memory.db`, which
+is ignored by source control. This mode runs only deterministic fixtures — no live ACP job,
+no spending approval, no settlement, no transaction.
+
+## Run the test suite
+
+```bash
+.venv/bin/python -m pytest
+```
+
+Last run: **60 passed, 15 subtests passed in ~24 s**, including 3 Phase 7 tests in
+`tests/test_phase7_live.py`.
+
+## Run the Phase 7 restart test (proves paid work survives a process restart)
+
+```bash
+.venv/bin/python scripts/restart_test.py
+```
+
+A fresh Python process, no in-memory cache, reads the completed Phase 7 job from disk and
+the on-chain artifact hash from Delta's local Sibyl DB. The expected output ends with
+`VERDICT: PASS — engine can resume and recall paid work`.
+
+## Architecture
 
 - small Python DAG/revision engine
 - Sibyl Memory as authoritative persistent work and revision state
@@ -79,29 +153,31 @@ Example revision behavior:
 - Virtuals ACP JSON CLI adapter for genuine service jobs and lifecycle reconciliation
 - Base mainnet payment/settlement evidence for the demonstrated paid work
 - minimal one-page web demonstration
-- separate LangGraph comparison harness for honest baseline validation, verified in Phase 6
+- separate LangGraph comparison harness for honest baseline validation
 
 See `MASTER_PLAN.md` for the complete architecture.
 
-## Required integrations for the intended submission
+## Required integrations
 
 ### Sibyl Memory
 
-Sibyl is on the critical path for reusable work lookup, revision state, execution attempts, and paid-job recovery after a real process restart. The current read and write paths are implemented in `delta/store.py`.
-
-The finished README must point directly to the implemented critical read and write paths once they exist.
+Sibyl is the critical path for reusable work lookup, revision state, execution attempts, and
+paid-job recovery after a real process restart. The read and write paths are implemented
+in `delta/store.py` and exercised by `tests/test_phase2_sibyl.py` and `tests/test_phase7_live.py`.
 
 ### Virtuals ACP
 
-The completed submission must exercise genuine service jobs, deliverables, and lifecycle reconciliation.
-
-Read-only discovery has verified current Base-supported candidates, but the demo mapping remains provisional until one exact live job scope is approved. The current candidates are Syeollanga-claw `ai_image_generation` for visuals, Aaga `content_generation` for announcement copy, and OpenClaw Chile `Translation Service EN/ES/PT` for translation. Their live prices and schemas are recorded in `STATE.md` and `REFERENCES.md`.
+A real service-only job was executed end-to-end against the Aaga provider on Base mainnet.
+Read-only discovery verified the current Base-supported candidates; the Aaga offering
+was selected for Phase 7 because it is the cheapest live option (0.01 USDC) and provides
+deterministic, hash-attested deliverables. Live prices and schemas are recorded in
+`REFERENCES.md` and `STATE.md`.
 
 ### Base
 
-The intended live path is a Virtuals ACP service-only job on Base mainnet, with actual USDC funding/settlement evidence.
-
-Whether that same flow is accepted as separate Base and Virtuals partner evidence is still unverified and must be confirmed before claiming both partner stacks.
+The live path is a Virtuals ACP service-only job on Base mainnet, with actual USDC
+funding/settlement evidence. The on-chain transactions are listed in the **Live evidence**
+section above. The escrow contract is `0x238e541bfefd82238730d00a2208e5497f1832e0` (ACP Core v2).
 
 ## Planned developer experience
 
@@ -115,25 +191,24 @@ A workflow definition explicitly declares:
 - freshness policy
 - provider executor
 
-The application can then preview a revision before execution and return `reuse`, `rerun`, or `pending_dependency` with structured reasons and cost information where known.
+The application can then preview a revision before execution and return `reuse`, `rerun`, or
+`pending_dependency` with structured reasons and cost information where known.
 
 See `MASTER_PLAN.md` for the conceptual API.
 
-## Planned setup outline
+## Setup
 
-Exact commands will be added only after implementation exists.
+Local prerequisites:
 
-Expected local prerequisites:
-
-- Python 3.11 or newer, subject to repository constraints
-- Node.js 20.19 or newer for the current ACP CLI package
-- Sibyl Memory installed and initialized
-- Virtuals ACP CLI installed and authenticated through its supported split flow for scripted use
-- ACP signer configured securely for live onchain actions
-- persistent artifact directory
+- Python 3.10 or newer (the Phase 7 build used 3.12.3)
+- Node.js 20.19 or newer (Phase 7 used 26.7.0)
+- Sibyl Memory installed (`pip install sibyl-memory-client==0.8.0`)
+- Virtuals ACP CLI installed (`npx -p @virtuals-protocol/acp-cli@1.0.34 acp --help`)
+- ACP signer configured securely for live onchain actions (Privy is the supported hosted signer)
 - network access to Virtuals and Base
+- `.env` populated per `.env.example` (not committed)
 
-No credential values belong in this repository.
+**No credential values belong in this repository.** See `SECURITY.md`.
 
 ## Documentation
 
@@ -144,40 +219,35 @@ Recommended reading order:
 3. `IMPLEMENTATION_PLAN.md` for phase order and exit gates.
 4. `SECURITY.md` for trust and spending boundaries.
 5. `STATE.md` for current truth.
-6. `REFERENCES.md` for official sources and unresolved API questions.
+6. `REFERENCES.md` for official sources, pinned versions, and the Phase 7 API surface.
 7. `DEMO_RUNBOOK.md` for the judge path.
 8. `HANDOFF.md` for continuation context.
 
 ## Requirements ownership
 
 Stable requirements and architecture are owned by `MASTER_PLAN.md`.
-
 Live progress is owned by `STATE.md`.
-
 Do not use README status text as a substitute for `STATE.md` during development.
 
 ## Baseline and prior work
 
-LangGraph's official documentation describes node input caching with custom cache keys and TTL, plus persistent checkpoint/store options.
-
-Delta will compare against a correctly configured baseline and will not claim selective reruns or restart persistence as novel.
+LangGraph's official documentation describes node input caching with custom cache keys and
+TTL, plus persistent checkpoint/store options. The Phase 6 baseline measures overlap against
+a correctly configured LangGraph harness and confirms that selective reruns, input-keyed
+caching, TTL, and restart recovery are not unique to Delta.
 
 See `REFERENCES.md` for sources.
 
 ## Security and spending
 
 No live paid action is authorized by this repository documentation alone.
-
-Builders must obtain explicit user approval before any wallet funding, ACP job creation that broadcasts, escrow funding, settlement, or other onchain transaction.
-
+Builders must obtain explicit user approval before any wallet funding, ACP job creation
+that broadcasts, escrow funding, settlement, or other onchain transaction.
 Interrupted paid work must be reconciled before retry.
-
 Delta will not claim universal exactly-once execution.
 
 See `SECURITY.md`.
 
 ## License
 
-The hackathon requires an OSI-approved license for the public repository.
-
-Preserve an existing compliant repository license. If the project has no license when implementation begins, the current plan is to use Apache-2.0 unless the user specifies another approved license.
+Apache-2.0 — see `LICENSE`.

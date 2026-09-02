@@ -344,14 +344,45 @@ Plan:
 
 ## Version-recording policy
 
-Before final submission, replace planning observations with exact versions from the actual build environment:
+Captured from the build environment that ran Phase 7 (live ACP on Base mainnet):
 
-- Python
-- Sibyl client/CLI
-- ACP CLI
-- Node.js
-- FastAPI or existing server stack
-- LangGraph baseline package
-- any Base client library
+| Component | Version | Source |
+|---|---|---|
+| Python | 3.12.3 | `.venv/bin/python --version` |
+| Sibyl memory client | 0.8.0 | `sibyl-memory-client` PyPI |
+| Sibyl memory CLI | 0.4.0 | `sibyl-memory-cli` PyPI |
+| Node.js | 26.7.0 | `node --version` |
+| ACP CLI (`@virtuals-protocol/acp-cli`) | 1.0.34 | installed via `npx -p @virtuals-protocol/acp-cli` |
+| LangGraph | 1.2.11 | optional baseline dependency |
+| langgraph-checkpoint-sqlite | 3.1.1 | baseline dependency |
+| pytest | 9.1.1 | dev dep |
+| pytest-asyncio | 1.4.0 | dev dep |
+| uvicorn | 0.52.4 | local web demo |
 
-The final demo must use the same pinned versions documented in the repository or explain the difference.
+Notable API surface (from Phase 7 live run, recorded against `@virtuals-protocol/acp-cli@1.0.34`):
+
+- `acp client create-job` validates the `--requirements` JSON against the offering's local schema
+  in the CLI. The schema lives at the `properties` layer (`topic`, `content_type` are required for
+  the Aaga `content_generation` offering) and the CLI rejects payloads that do not list those
+  required fields. Aaga's on-chain job handler, however, expects the **envelope** shape
+  `{"name": "<offering_name>", "requirement": {<actual fields>}}`. The proven Phase 7 pattern is:
+  create the job with the flat shape, then immediately send an additional `requirement`-typed
+  message to the resulting job ID using the envelope shape.
+- `acp client fund` accepts `--amount <human-readable>` (e.g. `0.01` for 0.01 USDC). The CLI
+  converts internally to the 6-decimal USDC base unit before sending the escrow transaction.
+- `acp client complete` looks the job up via the in-process session map. Across separate CLI
+  invocations the session is not always populated, so `client complete` can return
+  `SESSION_NOT_FOUND` even when the job is alive onchain. The proven Phase 7 workaround is to
+  complete the job via the underlying SDK (`@virtuals-protocol/acp-node-v2`) with
+  `agent.internalComplete(...)`. This was the path that actually settled job 75656.
+- The escrow contract on Base mainnet is `0x238e541bfefd82238730d00a2208e5497f1832e0` (ACP Core
+  v2). All funding, settlement, refund, and `JobCompleted` events for live service jobs
+  on Base mainnet are emitted from this contract.
+- The native USDC contract on Base is `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` (6 decimals).
+- Base mainnet chain ID is 8453; the public RPC at `https://mainnet.base.org` accepts the
+  standard Ethereum JSON-RPC and was used to verify every transaction in Phase 7.
+- The Delta agent wallet (Privy-hosted, ACP-signer-only — no raw key on this machine) is
+  `0x702Ab9EcFB9F87F52e79157b2EA6A929B60eC576`. See `SECURITY.md` for the spend rules.
+
+The final demo and any code in the repository must use the same pinned versions listed above or
+explicitly explain the difference.
