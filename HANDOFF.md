@@ -40,23 +40,22 @@ The provider-neutral Phase 1 core, Phase 2 Sibyl persistence, Phase 3 determinis
 
 ## Next implementation action
 
-Phase 7 is blocked at the wallet-funding gate. Delta agent wallet has 0.0005 ETH (pre-allocated, no onchain history) but 0 USDC and 0 USDC.e on Base 8453 at block 50799003, 2026-09-02 22:15 UTC. Owner reports funding was sent but did not land. Phase 7 cannot broadcast `acp client create-job` until ≥ 0.02 USDC lands at `0x702ab9ecfb9f87f52e79157b2ea6a929b60ec576`.
+Phase 7 funding gate is now clear. Delta agent wallet `0x702ab9ecfb9f87f52e79157b2ea6a929b60ec576` has 0.0005 ETH gas and **0.10 USDC** at block 50799003. Funding tx `0xbb3625fca92c1aba3099f052da2037cfa4996e258712da728c883e7cb049f222` is verified successful. Native USDC contract: `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913`.
 
-When USDC is visible on-chain, proceed with Aaga `content_generation` (`019d7c71-44c9-7329-bcf6-3edb953d6711`), fixed 0.01 USDC, Base 8453, max service cap 0.02 USDC, broadcast actions: create-job + fund + complete (settlement is a separate confirmation). Steps:
+Proceed with Aaga `content_generation` (`019d7c71-44c9-7329-bcf6-3edb953d6711`), fixed 0.01 USDC, Base 8453, max service cap 0.02 USDC, broadcast actions: create-job + fund + complete (settlement is a separate confirmation). Steps:
 
-1. Re-verify USDC balance at the wallet.
+1. Persist Phase 7 plan + approval in Sibyl.
 2. `acp events listen` in background; capture local event file outside source control.
-3. Persist Phase 7 plan + approval in Sibyl.
-4. `acp client create-job --chain-id 8453 --offering-id 019d7c71-44c9-7329-bcf6-3edb953d6711 --requirements '<JSON>' --json`.
-5. Persist returned job ID and tx hash immediately.
-6. Reconcile until `budget_set`, verify quote within cap.
-7. `acp client fund --job-id ... --amount 0.01 --json`.
-8. Persist funding tx hash + amount + block.
-9. Reconcile until `submitted`, fetch deliverable, hash-validate, mark available.
-10. `acp client complete --job-id ... --json` (settlement approval gate before this).
-11. Verify Base receipt independently (`eth_getTransactionReceipt`).
-12. Stop Delta process; start fresh process; reload same project; prove Sibyl restores the paid work and job identity.
-13. Update STATE.md to Phase 7 verified; pin versions in REFERENCES.md; commit evidence bundle to `.evidence/` outside source control.
+3. `acp client create-job --chain-id 8453 --offering-id 019d7c71-44c9-7329-bcf6-3edb953d6711 --requirements '<JSON>' --json`.
+4. Persist returned job ID and tx hash immediately.
+5. Reconcile until `budget_set`, verify quote within cap.
+6. `acp client fund --job-id ... --amount 0.01 --json`.
+7. Persist funding tx hash + amount + block.
+8. Reconcile until `submitted`, fetch deliverable, hash-validate, mark available.
+9. `acp client complete --job-id ... --json` (settlement approval gate before this).
+10. Verify Base receipt independently (`eth_getTransactionReceipt`).
+11. Stop Delta process; start fresh process; reload same project; prove Sibyl restores the paid work and job identity.
+12. Update STATE.md to Phase 7 verified; pin versions in REFERENCES.md; commit evidence bundle to `.evidence/` outside source control.
 
 The local demonstration can still be started with `.venv/bin/python run_demo.py` and opened at `http://127.0.0.1:8000`. It runs input-sensitive deterministic fixtures through the real Sibyl store. The page labels fixture mode and does not present fixture output as live ACP or Base evidence.
 

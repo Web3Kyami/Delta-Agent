@@ -98,10 +98,11 @@ Last updated: 2026-09-02 (Phase 7 blocked at wallet funding gate)
 ## Phase 7 funding gate (2026-09-02 22:15 UTC)
 
 - Delta agent EVM wallet `0x702ab9ecfb9f87f52e79157b2ea6a929b60ec576` was funded with `0.0005 ETH` for gas (no transaction history observed — appears to be a pre-allocated balance from the ACP wallet provider).
-- No USDC and no USDC.e balance on Base mainnet at block 50799003. Blockscout shows zero incoming ERC-20 transfers. Native USDC `eth_call` returns empty.
-- **Phase 7 live job creation is BLOCKED.** `acp client create-job` on Base will revert because escrow cannot be funded.
-- Owner (Kyami) reported funding was sent but it did not land. Likely causes: tx not yet broadcast, wrong address, or wrong asset. Re-verification needed before Phase 7 can run.
-- Required for Phase 7: ≥ 0.02 USDC (or USDC.e) on Base 8453 at Delta wallet, plus existing 0.0005 ETH gas.
+- **USDC funding verified at block 50799003, 2026-09-02 22:15 UTC.** Owner provided tx `0xbb3625fca92c1aba3099f052da2037cfa4996e258712da728c883e7cb049f222` confirmed via `eth_getTransactionReceipt`: status `0x1` (success), block 50799743, log from `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` (native USDC on Base) transferring `100000` (6-decimal) to the Delta wallet.
+- Native USDC balance: **0.10 USDC** (verified with correct checksum `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913`; an earlier check used a wrong USDC address and returned 0x).
+- USDC.e (`0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6ca`): 0.
+- Phase 7 ready: gas + USDC both present. Live `acp client create-job` is no longer blocked.
+- Wallet is **Privy-hosted** (`"provider":"PRIVY"` per `acp agent whoami`). The raw private key is not on this machine; outbound moves go through `acp client transfer` (Privy signing) or via the Privy dashboard directly.
 
 ## Unverified
 
