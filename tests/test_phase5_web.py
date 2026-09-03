@@ -109,8 +109,8 @@ class PhaseFiveWebTests(unittest.TestCase):
     def test_application_routes_have_distinct_active_pages(self) -> None:
         expected = {
             "/app/overview": "Good morning.",
-            "/app/revisions": "Plan the next run",
-            "/app/runs": "Execution continuity",
+            "/app/revisions": "Revise completed work",
+            "/app/runs": "Runs",
             "/app/continuity": "Pick up where the work stopped",
             "/app/integrations": "Execution stack",
         }
@@ -125,6 +125,23 @@ class PhaseFiveWebTests(unittest.TestCase):
         status, _, headers = self.client.request("/app")
         self.assertEqual(status, "302 Found")
         self.assertEqual(headers["Location"], "/app/overview")
+
+    def test_workflow_routes_keep_the_progressive_flow(self) -> None:
+        expected = {
+            "/app/workflows/launch-package": "Workflow",
+            "/app/workflows/launch-package/revise": "Change request",
+            "/app/revisions/latest/preview": "Revision preview",
+            "/app/revisions/latest/execute": "Execution",
+            "/app/revisions/latest": "Revision result",
+            "/app/workflows/launch-package/history": "Workflow history",
+            "/app/jobs/75656": "Reconciliation",
+        }
+        for path, title in expected.items():
+            status, body, _ = self.client.request(path)
+            document = body.decode()
+            self.assertEqual(status, "200 OK")
+            self.assertIn(f"<title>{title} | Delta</title>", document)
+            self.assertNotIn("{{", document)
 
     def test_state_changes_require_csrf_and_valid_inputs(self) -> None:
         status, response, _ = self.client.json("/api/preview", "POST", self.payload)

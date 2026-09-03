@@ -2,6 +2,8 @@
 
 The local interface now has a public product site and separate application routes for Overview, Revisions, Runs, Continuity, and Integrations. `DESIGN.md` owns the page map, visual system, content rules, and staged interface roadmap. Preserve its honest live-versus-fixture states when connecting future ACP and Base behavior.
 
+The latest application pass leaves the public site untouched and makes the in-product journey explicit: `/app/workflows/launch-package` shows completed work and saved artifacts, `/app/workflows/launch-package/revise` edits inputs, `/app/revisions/latest/preview` and `/app/revisions/latest/execute` resolve to the existing preview and execution surfaces, `/app/workflows/launch-package/history` exposes the run surface, and `/app/jobs/<id>` opens reconciliation context. These are server-rendered aliases over the existing Sibyl-backed API path, not new simulated execution states.
+
 ## Current position
 
 Delta's product direction is fixed. Do not reopen ideation unless the user explicitly changes the product.
@@ -10,7 +12,7 @@ Delta helps developers revise paid agent work by previewing reuse/rerun decision
 
 **Phase 7 is partially verified and blocked.** Independent Base receipt reads and a fresh authenticated ACP history read confirm Aaga `content_generation` job 75656, 0.01 USDC funded, 0.009 USDC paid to the provider, 0.0005 USDC returned to Delta, and 0.0005 USDC sent to another recipient. The exact provider deliverable string matches the onchain hash under the official ACP EVM Keccak rule. Delta's adapter now parsed and persisted the live observation in a disposable Sibyl scope, but did not create a reusable WorkResult by design.
 
-**Phase 8 is partially complete and blocked.** The deterministic suite passes, documentation claims are being corrected, and the existing local evidence has been audited. Live ACP history, adapter observation capture, and provider hash verification now pass. Reproducible evidence packaging, live paid execution-to-reusable-work proof, and final submission materials remain open.
+**Phase 8 is partially complete and blocked.** The deterministic suite passes, documentation claims are being corrected, and the existing local evidence has been audited. Live ACP history, adapter observation capture, and provider hash verification now pass. Reproducible evidence packaging, live paid execution-to-reusable-work proof, and final submission materials remain open. The application experience pass is locally verified with 74 tests and 15 subtests; it does not change the live integration blockers.
 
 The approved live validation attempt created Aaga job `75773` on Base `8453` at the quoted `0.01 USDC` service price. The provider rejected the CLI-generated requirement as malformed, and the job remains `open` and unfunded after the exact envelope was resent through the available official message content types. No additional money moved. Delta persisted the known job as an active attempt and did not create a WorkResult or artifact.
 

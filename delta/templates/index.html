@@ -33,13 +33,13 @@
       </div>
       <div class="project-switcher" aria-label="Current project"><span class="project-avatar">L</span><span><strong>Launch package</strong><small>Demo project</small></span></div>
       <nav class="nav-list">
-        <p class="nav-label">Workspace</p>
-        <a class="nav-item {{ACTIVE_OVERVIEW}}" href="/app/overview" {{CURRENT_OVERVIEW}}><svg><use href="#icon-grid"></use></svg><span>Overview</span></a>
+        <p class="nav-label">Workflow</p>
+        <a class="nav-item {{ACTIVE_OVERVIEW}}" href="/app/workflows/launch-package" {{CURRENT_OVERVIEW}}><svg><use href="#icon-grid"></use></svg><span>Workflows</span></a>
         <a class="nav-item {{ACTIVE_REVISIONS}}" href="/app/revisions" {{CURRENT_REVISIONS}}><svg><use href="#icon-branch"></use></svg><span>Revisions</span><span class="nav-count">3</span></a>
         <a class="nav-item {{ACTIVE_RUNS}}" href="/app/runs" {{CURRENT_RUNS}}><svg><use href="#icon-clock"></use></svg><span>Runs</span></a>
-        <a class="nav-item {{ACTIVE_CONTINUITY}}" href="/app/continuity" {{CURRENT_CONTINUITY}}><svg><use href="#icon-memory"></use></svg><span>Continuity</span></a>
         <a class="nav-item {{ACTIVE_INTEGRATIONS}}" href="/app/integrations" {{CURRENT_INTEGRATIONS}}><svg><use href="#icon-plug"></use></svg><span>Integrations</span></a>
         <p class="nav-label nav-label-secondary">Delta</p>
+        <a class="nav-item {{ACTIVE_CONTINUITY}}" href="/app/continuity" {{CURRENT_CONTINUITY}}><svg><use href="#icon-memory"></use></svg><span>Continuity</span></a>
         <a class="nav-item" href="/"><svg><use href="#icon-arrow"></use></svg><span>Back to site</span></a>
       </nav>
       <div class="sidebar-status"><div class="status-orbit"><span></span></div><div><strong>Demo environment</strong><small>No live provider connected</small></div></div>
@@ -55,9 +55,9 @@
 
       <main id="main-content" class="content-frame">
         <section id="overview" class="view-page" aria-labelledby="page-title" {{HIDDEN_OVERVIEW}}>
-          <div class="page-heading"><div><p class="eyebrow">Launch package</p><h1 id="page-title">Good morning.</h1><p class="lede">Review the current work, start a revision, or inspect the latest saved state.</p></div><a class="button button-primary" href="/app/revisions"><span>Create revision</span><svg><use href="#icon-arrow"></use></svg></a></div>
+          <div class="page-heading"><div><p class="eyebrow">Completed workflow</p><h1 id="page-title">Good morning. Your work is here.</h1><p class="lede">Inspect the launch package that already exists, then revise only what the new request affects.</p></div><a class="button button-primary" href="/app/workflows/launch-package/revise"><span>Revise this work</span><svg><use href="#icon-arrow"></use></svg></a></div>
           <div class="overview-layout">
-            <section class="overview-primary panel"><div class="overview-title"><div><p class="section-kicker">Current workflow</p><h2>Launch package</h2></div><span class="status-pill status-awaiting">Ready for preview</span></div><div class="overview-flow"><div><span>01</span><strong>Product visual</strong><small>Description + visual brief</small></div><i></i><div><span>02</span><strong>Announcement</strong><small>Description + launch date</small></div><i></i><div><span>03</span><strong>Translation</strong><small>Announcement + language</small></div></div><div class="overview-action"><p>Three declared steps. One dependency. Delta will calculate the smallest safe rerun from the current inputs.</p><a href="/app/revisions">Review inputs <span aria-hidden="true">→</span></a></div></section>
+            <section class="overview-primary panel"><div class="overview-title"><div><p class="section-kicker">Current workflow</p><h2>Launch package</h2></div><span class="status-pill status-awaiting">Saved work</span></div><div class="overview-flow"><div><span>01</span><strong>Product visual</strong><small>Description + visual brief</small></div><i></i><div><span>02</span><strong>Announcement</strong><small>Description + launch date</small></div><i></i><div><span>03</span><strong>Translation</strong><small>Announcement + language</small></div></div><div id="workflow-artifacts" class="workflow-artifacts" aria-live="polite"><article class="workflow-artifact" data-state="empty"><div class="workflow-artifact-head"><span>01 / Product visual</span><span class="status-pill status-idle">Loading</span></div><h3>Saved output</h3><pre class="artifact-output">Checking project state…</pre><div class="artifact-meta"><span>Last execution</span><strong>Unknown</strong></div></article><article class="workflow-artifact" data-state="empty"><div class="workflow-artifact-head"><span>02 / Announcement</span><span class="status-pill status-idle">Loading</span></div><h3>Saved output</h3><pre class="artifact-output">Checking project state…</pre><div class="artifact-meta"><span>Last execution</span><strong>Unknown</strong></div></article><article class="workflow-artifact" data-state="empty"><div class="workflow-artifact-head"><span>03 / Translation</span><span class="status-pill status-idle">Loading</span></div><h3>Saved output</h3><pre class="artifact-output">Checking project state…</pre><div class="artifact-meta"><span>Last execution</span><strong>Unknown</strong></div></article></div><div class="overview-action"><p>Three declared steps. One dependency. Delta calculates the smallest safe rerun from the current inputs.</p><a href="/app/workflows/launch-package/revise">Change request <span aria-hidden="true">→</span></a></div></section>
             <aside class="overview-side"><article class="panel quick-stat"><span>Saved outputs</span><strong id="overview-saved">Not checked</strong><small>Open Continuity to restore work</small></article><article class="panel quick-stat"><span>Live provider</span><strong>Not connected</strong><small>No paid action is available</small></article></aside>
           </div>
         </section>
@@ -65,7 +65,7 @@
         <div id="live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
         <section id="revision-lab" class="product-section view-page" aria-labelledby="revision-title" {{HIDDEN_REVISIONS}}>
-          <div class="section-heading"><div><p class="section-kicker">Revision Lab</p><h2 id="revision-title">Plan the next run</h2></div><p>Change an input, preview the effect, then execute only the work the plan requires.</p></div>
+          <div class="section-heading"><div><p class="section-kicker">Change request</p><h2 id="revision-title">Revise completed work</h2></div><p>Edit the request without executing anything, then preview exactly what the change affects.</p></div>
           <div class="workspace-grid" aria-label="Delta workflow workspace">
             <form id="workflow-form" class="panel inputs-panel" novalidate>
               <div class="panel-heading"><div><span class="step-index">01</span><div><h3>Request inputs</h3><p>All fields are required.</p></div></div></div>
@@ -76,12 +76,12 @@
                 <div class="field-group"><label for="launch-date">Launch date <span class="required" aria-hidden="true">*</span></label><input id="launch-date" name="launch_date" type="date" value="2026-09-10" required></div>
                 <div class="field-group"><label for="target-language">Target language <span class="required" aria-hidden="true">*</span></label><input id="target-language" name="target_language" type="text" value="de" autocomplete="language" aria-describedby="language-help" required><p id="language-help" class="helper helper-progressive">Use a code such as de or fr.</p></div>
               </div>
-              <div class="form-actions"><button id="preview-button" class="button button-primary" type="submit"><span>Preview revision</span><svg><use href="#icon-arrow"></use></svg></button><button id="restore-button" class="button button-secondary" type="button"><svg><use href="#icon-restore"></use></svg><span>Restore saved work</span></button></div>
+              <div class="form-actions"><button id="preview-button" class="button button-primary" type="submit"><span>Preview revision</span><svg><use href="#icon-arrow"></use></svg></button><button id="restore-button" class="button button-secondary" type="button"><svg><use href="#icon-restore"></use></svg><span>Restore saved work</span></button><a class="button button-quiet" href="/app/workflows/launch-package">Cancel</a></div>
               <p class="action-note">Preview checks saved work. It does not create a provider job or spend funds.</p>
             </form>
 
             <section class="panel readout-panel" aria-labelledby="readout-title" aria-busy="false">
-              <div class="panel-heading"><div><span class="step-index step-index-blue">02</span><div><h3 id="readout-title">Change plan</h3><p>Derived from current inputs and stored work.</p></div></div><span id="readout-state" class="status-pill status-idle">Idle</span></div>
+              <div class="panel-heading"><div><span class="step-index step-index-blue">02</span><div><h3 id="readout-title">Revision preview</h3><p>Derived from current inputs and stored work.</p></div></div><span id="readout-state" class="status-pill status-idle">Idle</span></div>
               <div id="recovery-banner" class="recovery-banner" hidden><span class="recovery-icon"><svg><use href="#icon-memory"></use></svg></span><div><strong>Saved work loaded</strong><span id="recovery-message">This project can be recovered in a new session.</span></div></div>
               <div class="metrics-grid"><div class="metric metric-featured"><span>Estimated added cost</span><strong id="estimated-cost">Unknown</strong><small id="cost-source">No preview yet</small></div><div class="metric"><span>Reuse</span><strong id="reuse-count">0</strong><small>steps retained</small></div><div class="metric"><span>Rerun</span><strong id="rerun-count">0</strong><small>steps changed</small></div><div class="metric"><span>Waiting</span><strong id="pending-count">0</strong><small>dependencies</small></div></div>
               <div class="plan-reference"><span>Actual service cost</span><strong id="actual-cost">Not recorded</strong><details><summary>Technical evidence</summary><span>Plan ID</span><code id="plan-id">Not created</code></details></div>
@@ -93,7 +93,7 @@
         </section>
 
         <section id="runs" class="product-section view-page" aria-labelledby="runs-title" {{HIDDEN_RUNS}}>
-          <div class="section-heading"><div><p class="section-kicker">Runs</p><h2 id="runs-title">Execution continuity</h2></div><p>Read the latest saved plan and inspect the state of every step.</p></div>
+          <div class="section-heading"><div><p class="section-kicker">Runs</p><h2 id="runs-title">{{PAGE_TITLE}}</h2></div><p>Read the latest saved plan and inspect the state of every step.</p></div>
           <div class="operations-grid">
             <article class="panel run-card"><div class="run-card-top"><span class="run-icon"><svg><use href="#icon-clock"></use></svg></span><div><h3>Current revision</h3><p id="run-project">launch-demo</p></div><span id="run-state" class="status-pill status-idle">Not previewed</span></div><div class="run-facts"><div><span>Workflow</span><strong>launch-package-v1</strong></div><div><span>Generated</span><strong id="run-generated">Not yet</strong></div><div><span>Execution source</span><strong>Local deterministic fixture</strong></div></div></article>
             <article class="panel empty-operation"><span class="operation-icon"><svg><use href="#icon-plug"></use></svg></span><div><h3>No live ACP run attached</h3><p>Provider, quote, job, and chain fields stay empty until a verified live execution is connected.</p></div><span class="status-pill status-unavailable">Unavailable</span></article>

@@ -25,7 +25,13 @@ STATIC_ROOT = Path(__file__).with_name("static")
 MAX_BODY_BYTES = 32 * 1024
 APP_VIEWS = {
     "/app/overview": ("overview", "Overview"),
+    "/app/workflows/launch-package": ("overview", "Workflow"),
+    "/app/workflows/launch-package/revise": ("revisions", "Change request"),
+    "/app/workflows/launch-package/history": ("runs", "Workflow history"),
     "/app/revisions": ("revisions", "Revisions"),
+    "/app/revisions/latest/preview": ("revisions", "Revision preview"),
+    "/app/revisions/latest/execute": ("runs", "Execution"),
+    "/app/revisions/latest": ("runs", "Revision result"),
     "/app/runs": ("runs", "Runs"),
     "/app/continuity": ("continuity", "Continuity"),
     "/app/integrations": ("integrations", "Integrations"),
@@ -49,6 +55,8 @@ class DeltaWebApp:
                 return self._respond_landing(environ, start_response)
             if path == "/app" and method == "GET":
                 return self._redirect(start_response, "/app/overview")
+            if path.startswith("/app/jobs/") and method == "GET":
+                return self._respond_app(environ, start_response, "continuity", "Reconciliation")
             if path in APP_VIEWS and method == "GET":
                 return self._respond_app(environ, start_response, *APP_VIEWS[path])
             if path.startswith("/static/") and method == "GET":
@@ -118,6 +126,8 @@ class DeltaWebApp:
         asset = STATIC_ROOT / relative
         if relative == "landing.css":
             body = asset.read_bytes() + b"\n" + (STATIC_ROOT / "hero.css").read_bytes()
+        elif relative == "styles.css":
+            body = asset.read_bytes() + b"\n" + (STATIC_ROOT / "app-overrides.css").read_bytes()
         else:
             body = asset.read_bytes()
         start_response("200 OK", [("Content-Type", content_types[relative]), ("Cache-Control", "no-cache")])

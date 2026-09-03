@@ -14,6 +14,7 @@
   const navOverlay = document.querySelector("#nav-overlay");
   const continuityRestore = document.querySelector("#continuity-restore");
   const currentView = document.body.dataset.view;
+  const initialInputValues = form ? Object.fromEntries(new FormData(form).entries()) : {};
   let latestPlanId = null;
   let lastNavTrigger = null;
   let executeShouldBeDisabled = true;
@@ -58,12 +59,20 @@
   }
 
   function invalidatePreview() {
+    markChangedInputs();
     if (!latestPlanId) return;
     latestPlanId = null;
     executeShouldBeDisabled = true;
     executeButton.disabled = true;
     document.querySelector("#execution-note").textContent = "Inputs changed. Preview the current inputs again before executing.";
     announce("Inputs changed. The previous preview is no longer current.");
+  }
+
+  function markChangedInputs() {
+    if (!form) return;
+    form.querySelectorAll("[name]").forEach(field => {
+      field.classList.toggle("is-changed", field.value !== initialInputValues[field.name]);
+    });
   }
 
   function setBusy(button, busy, busyLabel) {
@@ -202,6 +211,43 @@
     return row;
   }
 
+  function renderWorkflowArtifacts(payload) {
+    const container = document.querySelector("#workflow-artifacts");
+    if (!container) return;
+    container.replaceChildren();
+    (payload.steps || []).forEach((step, index) => {
+      const card = document.createElement("article");
+      card.className = "workflow-artifact";
+      const hasOutput = step.current_output !== null && step.current_output !== undefined;
+      card.dataset.state = hasOutput ? (step.source === "deterministic fixture" ? "fixture" : "saved") : "empty";
+      const head = document.createElement("div"); head.className = "workflow-artifact-head";
+      addText(head, "span", `${String(index + 1).padStart(2, "0")} / ${step.label}`);
+      addText(head, "span", hasOutput ? "Saved" : "Not available", `status-pill ${hasOutput ? "status-reuse" : "status-idle"}`);
+      card.appendChild(head);
+      addText(card, "h3", hasOutput ? "Current output" : "No saved output");
+      addText(card, "pre", hasOutput ? JSON.stringify(step.current_output, null, 2) : "This workflow has no matching completed output for the current request.", "artifact-output");
+      const meta = document.createElement("div"); meta.className = "artifact-meta";
+      const execution = document.createElement("div");
+      addText(execution, "span", step.completed_at ? "Last execution" : "Freshness");
+      addText(execution, "strong", step.completed_at ? new Date(step.completed_at).toLocaleString() : "Unknown");
+      meta.appendChild(execution);
+      const cost = document.createElement("div");
+      addText(cost, "span", "Actual cost");
+      const costValue = step.actual_cost != null
+        ? `${step.actual_cost} ${step.actual_cost_currency || "USDC"}`
+        : (step.actual_cost_status === "not_applicable_fixture" ? "Not applicable" : "Unknown");
+      addText(cost, "strong", costValue);
+      meta.appendChild(cost);
+      const provider = step.provider || (step.job_id ? `Job ${step.job_id}` : "Not attached");
+      const providerLine = document.createElement("div");
+      addText(providerLine, "span", "Provider");
+      addText(providerLine, "strong", provider);
+      meta.appendChild(providerLine);
+      card.appendChild(meta); container.appendChild(card);
+    });
+    if (!payload.steps || payload.steps.length === 0) addText(container, "p", "No workflow state was returned.", "compact-empty");
+  }
+
   function render(payload) {
     latestPlanId = payload.status === "previewed" ? (payload.plan_id || null) : null;
     const state = document.querySelector("#readout-state");
@@ -213,6 +259,7 @@
     const actualCost = payload.execution ? payload.execution.actual_service_cost : payload.actual_service_cost;
     document.querySelector("#actual-cost").textContent = actualCost == null ? (payload.actual_cost_status === "not_applicable_fixture" ? "Not applicable" : "Not recorded") : `${actualCost} USDC`;
     const payloadSteps = payload.steps || [];
+    renderWorkflowArtifacts(payload);
     document.querySelector("#reuse-count").textContent = payloadSteps.filter(step => step.decision === "reuse").length;
     document.querySelector("#rerun-count").textContent = payloadSteps.filter(step => step.decision === "rerun").length;
     document.querySelector("#pending-count").textContent = payloadSteps.filter(step => step.decision === "pending_dependency").length;
@@ -334,7 +381,10 @@
 
   if (["overview", "runs"].includes(currentView)) {
     const query = new URLSearchParams(values());
-    request(`/api/state?${query.toString()}`).then(render).catch(error => showError(error.message));
+    request(`/api/state?${query.toString()}`).then(render).catch(error => {
+      renderWorkflowArtifacts({ steps: [] });
+      showError(error.message);
+    });
   }
 
   function getCsrfToken() {

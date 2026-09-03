@@ -1,5 +1,14 @@
 # Delta State
 
+## 2026-09-03 application experience pass
+
+- Reworked the existing application workspace around a progressive completed-work flow: workflow overview, change request, revision preview, execution/result, workflow history, and reconciliation aliases. The public landing page was not changed in this pass.
+- Simplified primary navigation to Workflows, Revisions, Runs, and Integrations, with Continuity retained as a contextual recovery destination. Existing server routes remain compatible and new workflow URLs resolve to the same backend-driven views.
+- Overview now loads project-scoped saved outputs from `/api/state` and renders artifact cards from the returned steps. Empty, fixture, and saved states remain explicit; no provider or payment success is fabricated.
+- Added application-only visual overrides for an operational light canvas, dark navigation rail, artifact-first workflow cards, clear state chips, and responsive layouts at desktop, tablet, and mobile widths.
+- Added route coverage for the new workflow URLs and reconciliation entry point. JavaScript syntax and whitespace checks pass.
+- Verification: `74 passed, 15 subtests passed`; focused Phase 5 web tests pass (`7 passed`).
+
 ## 2026-09-03 public landing redesign
 
 - Replaced the rejected warm-paper editorial landing direction with a graphite, cold-white, orange, and violet execution system.
