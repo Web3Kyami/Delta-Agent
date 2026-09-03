@@ -9,6 +9,9 @@ description = "Provider-neutral revision planning for paid agent work"
 requires-python = ">=3.10"
 dependencies = []
 
+[tool.vercel]
+entrypoint = "app:app"
+
 [project.scripts]
 delta-demo = "delta.web:main"
 

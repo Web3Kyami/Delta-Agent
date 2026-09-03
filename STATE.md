@@ -8,6 +8,13 @@
 - Verified the complete test suite: `73 passed, 15 subtests passed`.
 - Rendered the landing page at 1440, 1024, 768, and 390 CSS pixel widths. The hero visualization is visible without scrolling at desktop size, and the mobile workflow becomes a readable vertical dependency flow without horizontal overflow.
 
+## 2026-09-03 hero-only visual exploration
+
+- Stopped the full-page redesign cycle as requested. Only the public navbar and first hero viewport changed. Existing sections below the hero remain structurally and visually untouched.
+- Added the original local asset `delta/static/solar-charger-campaign.png` for the fictional product visual artifact.
+- Chosen concept: overlapping artifact canvas. Alternatives considered: before/revision comparison and production-line timeline. Artifact canvas won on tangible work, five-second comprehension, and physical causality without a node-graph hero.
+- Verified image serving through the WSGI route (`200 OK`, `image/png`, 2,132,360 bytes), JavaScript syntax, full tests (`73 passed, 15 subtests passed`), and renders at 1440, 1024, and 390 pixels.
+
 Last updated: 2026-09-03 (brand and product interface build)
 
 ## Completed

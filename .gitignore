@@ -57,3 +57,4 @@ artifacts_tmp/
 # Test fixtures that may carry sample provider output
 tests/_artifacts/
 tests/fixtures/_artifacts/
+.vercel

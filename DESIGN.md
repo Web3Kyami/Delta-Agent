@@ -166,3 +166,13 @@ These references provide structural evidence only. Delta does not copy their bra
 ### Landing redesign implementation note
 
 Useful structural ideas are: put the behavior above the fold, use the topology itself as the hero artifact, let motion show causality, place real-looking but clearly illustrative output inside nodes, alternate dense dark execution fields with cold-white explanatory fields, simplify the topology into a vertical flow on mobile, and keep navigation actions literal. Delta's identity remains its controlled change signal, explicit reuse/rerun/pending decisions, paid-job reconciliation, and inspectable work record.
+
+### Hero exploration record, 2026-09-03
+
+Three spatial directions were considered before implementation:
+
+- Artifact canvas: a completed launch package arranged on overlapping planes, with the changed input entering the composition.
+- Before and revision: preserved, updated, and waiting artifacts compared as layered states.
+- Production line: three tangible outputs moving through a linear revision boundary.
+
+The artifact canvas won because it communicates Delta within five seconds, keeps all completed work perceptible, and gives the change a physical path without turning the hero into a schematic node graph. The chosen hero uses an original local product-campaign image at `delta/static/solar-charger-campaign.png`, generated specifically as a fictional launch-package visual with no logos, text, or external imagery. The announcement and translation are designed document artifacts and are labelled illustrative in the scene.

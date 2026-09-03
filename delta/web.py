@@ -111,12 +111,17 @@ class DeltaWebApp:
             "landing.js": "text/javascript; charset=utf-8",
             "logo.svg": "image/svg+xml",
             "favicon.svg": "image/svg+xml",
+            "solar-charger-campaign.png": "image/png",
         }
         if relative not in content_types:
             return self._json(start_response, {"status": "error", "message": "Static asset not found."}, 404)
         asset = STATIC_ROOT / relative
+        if relative == "landing.css":
+            body = asset.read_bytes() + b"\n" + (STATIC_ROOT / "hero.css").read_bytes()
+        else:
+            body = asset.read_bytes()
         start_response("200 OK", [("Content-Type", content_types[relative]), ("Cache-Control", "no-cache")])
-        return [asset.read_bytes()]
+        return [body]
 
     def _handle_state(self, environ: dict[str, Any], start_response: Callable[..., Any]):
         query = parse_qs(environ.get("QUERY_STRING", ""), keep_blank_values=True)
