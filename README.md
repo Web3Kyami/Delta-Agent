@@ -1,7 +1,7 @@
 # Delta
 
 > Working-name project for the Sibyl Labs hackathon.
-> **Live ACP service job on Base mainnet, end-to-end, verified onchain.**
+> **Deterministic revision planning with a recorded ACP and Base integration audit.**
 
 Delta is a developer library for revising paid agent work. Given a completed
 workflow and a revised request, Delta tells you:
@@ -22,7 +22,7 @@ external paid agent jobs.
 
 ## Status
 
-**Current status: Phases 1–7 verified on Base mainnet; Phase 8 evidence bundle complete.**
+**Current status: Phases 1–6 are verified. Phase 7 has live read-only ACP history and provider-deliverable hash integrity verified, plus a safe observation boundary, but Delta's paid execution-to-reusable-work path is not verified. Submission readiness is blocked pending the audit actions recorded in `STATE.md`.**
 
 Implemented and verified:
 
@@ -30,19 +30,25 @@ Implemented and verified:
 - **Phase 2**: Sibyl Memory persistence (entities + journal + artifact references)
 - **Phase 3**: deterministic execution engine, attempt lifecycle, blocked/failure states
 - **Phase 4**: no-spend Virtuals ACP adapter (read-only history, JSON CLI, reconciliation)
-- **Phase 5**: local one-page web demonstration (`run_demo.py` → `http://127.0.0.1:8000`)
+- **Phase 5**: public product site and route-based local operations workspace (`run_demo.py` → `http://127.0.0.1:8000`)
 - **Phase 6**: LangGraph comparison baseline (overlap measured, not claimed novel)
-- **Phase 7**: **live ACP service-only job against the Aaga provider on Base mainnet, USDC funded, settled, and persisted to Delta's Sibyl store. A fresh-process restart test re-reads the completed job purely from disk + DB.**
+- **Phase 7**: live Aaga ACP history and Base transaction evidence, with the paid execution-to-reusable-work gap documented rather than claimed as complete.
 
-The Python test suite is **60 passed, 15 subtests passed** in ~24 s. See
+The Python test suite is **73 passed, 15 subtests passed**. See
 `STATE.md` for verified facts, onchain evidence, and the next action.
 
-## Live evidence — Phase 7
+The latest approved live validation created Aaga ACP job `75773` on Base
+`8453`, but the provider rejected the CLI-generated requirement envelope and
+the job remains open and unfunded. This is recorded as a blocked live attempt,
+not a successful provider run.
+
+## Recorded external evidence — Phase 7
 
 A real service-only content generation job ran against the Aaga provider on
 Base mainnet (chain id 8453), was funded with USDC, was settled by the
-evaluator, and the resulting artifact hash was verified against the on-chain
-`Submitted` event.
+evaluator, and emitted a deliverable hash in the ACP `Submitted` event. These
+receipts are real external evidence. A current authenticated `acp job history`
+read also returned the completed job and exact provider deliverable string.
 
 | Field | Value |
 |---|---|
@@ -57,14 +63,22 @@ evaluator, and the resulting artifact hash was verified against the on-chain
 | Deliverable hash (on-chain attestation) | `0x5c970be48a64875341e4596c4f6d3b8c34c2df2680d9f0a2d6a6cc96c2ec29f8` |
 | USDC funded | 0.01 |
 | USDC settled to provider | 0.009 |
-| USDC refund to Delta (platform fee) | 0.001 |
+| USDC returned to Delta | 0.0005 |
+| USDC sent to another settlement recipient | 0.0005 |
+| Net Delta wallet service outflow, before gas | 0.0095 |
 | Escrow contract | `0x238e541bfefd82238730d00a2208e5497f1832e0` (ACP Core v2) |
 | Native USDC on Base | `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` (6 decimals) |
 
-Every value above is verified by reading the Base mainnet JSON-RPC
-(`https://mainnet.base.org`) directly — not from a log or a provider claim.
-The verifier script lives at `scripts/restart_test.py`; it is also wrapped
-as a pytest in `tests/test_phase7_live.py`.
+Transaction receipt status and token transfer amounts were independently read
+from Base mainnet JSON-RPC (`https://mainnet.base.org`). The exact provider
+deliverable string hashes to the attested value using the official ACP EVM rule,
+`keccak256(UTF-8 deliverable bytes)`. Delta still does not mark the output
+reusable: the live observation was intentionally recorded as
+`reconciliation_required`, and the live paid execution, settlement ingestion,
+and WorkResult/artifact persistence path has not run through Delta end to end.
+The current `scripts/restart_test.py` and
+`tests/test_phase7_live.py` inspect recorded data and are not live integration
+proof. See `STATE.md` for the tracked evidence audit and current blockers.
 
 ## Implemented core
 
@@ -82,9 +96,10 @@ artifact metadata uses REFERENCE records.
 
 `delta.execute.DeltaEngine` runs ready steps, persists attempt ownership before execution,
 reevaluates downstream inputs from actual outputs, and returns honest blocked and failure
-states. Its automated execution path uses clearly labelled deterministic fixtures; the live
-ACP integration is exercised in `scripts/persist_phase7.py` + `scripts/restart_test.py` and
-in the hermetic `tests/test_phase7_live.py`.
+states. Its automated execution path uses clearly labelled deterministic fixtures. A
+current read-only verification routes the real ACP history through the adapter and
+persistence boundary, but does not create a reusable WorkResult or prove the paid
+execution path.
 
 `delta.providers.acp` provides a narrow ACP boundary for JSON CLI execution, read-only
 history and watch operations, lifecycle parsing, intent persistence, cumulative approval
@@ -122,9 +137,15 @@ Example revision behavior:
 .venv/bin/python run_demo.py
 ```
 
-Then open `http://127.0.0.1:8000`. The default local store is `.delta/demo-memory.db`, which
+Then open `http://127.0.0.1:8000`. Use the primary call to action to enter the revision
+workspace at `/app/revisions`. The default local store is `.delta/demo-memory.db`, which
 is ignored by source control. This mode runs only deterministic fixtures — no live ACP job,
 no spending approval, no settlement, no transaction.
+
+The operator-gated `scripts/live_acp_validation.py` is separate from this local
+demo. It uses the real ACP CLI and Sibyl store, and refuses funding until live
+history reports the exact provider budget. It must not be presented as fixture
+evidence or run without matching approval.
 
 ## Run the test suite
 
@@ -132,30 +153,42 @@ no spending approval, no settlement, no transaction.
 .venv/bin/python -m pytest
 ```
 
-Last run: **60 passed, 15 subtests passed in ~24 s**, including 3 Phase 7 tests in
-`tests/test_phase7_live.py`.
+Last run: **73 passed, 15 subtests passed**. The three tests in
+`tests/test_phase7_live.py` are labelled recorded-data persistence fixtures, not
+live ACP tests. They include a genuinely new Python process that restores the
+recorded observation from Sibyl.
 
-## Run the Phase 7 restart test (proves paid work survives a process restart)
+## Inspect the recorded Phase 7 restart data
 
 ```bash
 .venv/bin/python scripts/restart_test.py
 ```
 
-A fresh Python process, no in-memory cache, reads the completed Phase 7 job from disk and
-the on-chain artifact hash from Delta's local Sibyl DB. The expected output ends with
-`VERDICT: PASS — engine can resume and recall paid work`.
+This starts a fresh Python process and reads the locally persisted recorded
+observation. It is useful for inspecting the stored identity, but it is not proof
+that a live job was written through Delta or that the artifact is reusable. The
+script intentionally exits with a blocked verdict. A clean clone does not contain
+the ignored `.delta` database.
 
 ## Architecture
 
 - small Python DAG/revision engine
 - Sibyl Memory as authoritative persistent work and revision state
 - persistent artifact directory for large output bytes
-- Virtuals ACP JSON CLI adapter for genuine service jobs and lifecycle reconciliation
-- Base mainnet payment/settlement evidence for the demonstrated paid work
-- minimal one-page web demonstration
+- Virtuals ACP JSON CLI adapter for service jobs and lifecycle reconciliation
+- Independently checked recorded Base payment and settlement evidence
+- branded server-rendered operations workspace for revisions, runs, memory, integrations, and safety
 - separate LangGraph comparison harness for honest baseline validation
 
 See `MASTER_PLAN.md` for the complete architecture.
+
+## Product interface
+
+The public site explains the product through an interactive, clearly illustrative revision example and leads to the working launch-package workspace. The application uses separate routes for Overview, Revisions, Runs, Continuity, and Integrations. Navigation changes the current page instead of scrolling a long dashboard.
+
+The revision API response drives the plan, summary metrics, run state, and continuity results. Storage and provider implementation details stay on the Integrations page or inside technical evidence rather than appearing throughout the normal workflow.
+
+`DESIGN.md` owns the Delta identity, visual system, information architecture, interaction rules, source research, and interface roadmap. The interface uses local HTML, CSS, JavaScript, and SVG assets without a runtime design-library dependency.
 
 ## Required integrations
 
@@ -163,21 +196,24 @@ See `MASTER_PLAN.md` for the complete architecture.
 
 Sibyl is the critical path for reusable work lookup, revision state, execution attempts, and
 paid-job recovery after a real process restart. The read and write paths are implemented
-in `delta/store.py` and exercised by `tests/test_phase2_sibyl.py` and `tests/test_phase7_live.py`.
+in `delta/store.py` and exercised by the deterministic Sibyl tests. The Phase 7 restart
+script reads a recorded observation through a fresh process and is not live-path evidence.
 
 ### Virtuals ACP
 
-A real service-only job was executed end-to-end against the Aaga provider on Base mainnet.
-Read-only discovery verified the current Base-supported candidates; the Aaga offering
-was selected for Phase 7 because it is the cheapest live option (0.01 USDC) and provides
-deterministic, hash-attested deliverables. Live prices and schemas are recorded in
-`REFERENCES.md` and `STATE.md`.
+Read-only discovery verified current Base-supported candidates. A recorded Aaga
+service-only job exists on Base mainnet. The adapter now accepts the observed create
+and history shapes and persists an explicit observation state, but the repository does
+not claim that this old job was captured through a live Delta execution. Live prices
+and schemas are recorded in `REFERENCES.md` and `STATE.md`.
 
 ### Base
 
-The live path is a Virtuals ACP service-only job on Base mainnet, with actual USDC
-funding/settlement evidence. The on-chain transactions are listed in the **Live evidence**
-section above. The escrow contract is `0x238e541bfefd82238730d00a2208e5497f1832e0` (ACP Core v2).
+The recorded external path is a Virtuals ACP service-only job on Base mainnet, with
+independently checked USDC funding and settlement receipts. The transactions are
+listed in the **Recorded external evidence** section above. The escrow contract is
+`0x238e541bfefd82238730d00a2208e5497f1832e0` (ACP Core v2). Delta does not yet
+claim a verified live Base integration in its runtime.
 
 ## Planned developer experience
 

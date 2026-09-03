@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from delta.artifacts import ArtifactResolutionStatus, ArtifactSafetyError, ArtifactStore
+from delta.artifacts import ArtifactResolutionStatus, ArtifactSafetyError, ArtifactStore, _HTTPSOnlyRedirectHandler
 from delta.core import ArtifactReference
 
 
@@ -60,6 +60,12 @@ class PhaseFourArtifactTests(unittest.TestCase):
             self.assertEqual(failed.status, ArtifactResolutionStatus.ERROR)
             with self.assertRaises(ArtifactSafetyError):
                 store.resolve_remote("http://provider.example/artifact", media_type="text/plain")
+
+    def test_remote_redirect_cannot_leave_https(self) -> None:
+        with self.assertRaises(ArtifactSafetyError):
+            _HTTPSOnlyRedirectHandler().redirect_request(
+                None, None, 302, "redirect", {}, "http://provider.example/artifact"
+            )
 
     def test_hash_mismatch_is_invalid_and_not_persisted(self) -> None:
         with tempfile.TemporaryDirectory(prefix="delta-artifacts-") as directory:

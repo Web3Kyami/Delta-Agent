@@ -18,9 +18,18 @@ from .store import SibylStore
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MEMORY_PATH = PROJECT_ROOT / ".delta" / "demo-memory.db"
-TEMPLATE_PATH = Path(__file__).with_name("templates") / "index.html"
+TEMPLATE_ROOT = Path(__file__).with_name("templates")
+LANDING_TEMPLATE_PATH = TEMPLATE_ROOT / "landing.html"
+APP_TEMPLATE_PATH = TEMPLATE_ROOT / "index.html"
 STATIC_ROOT = Path(__file__).with_name("static")
 MAX_BODY_BYTES = 32 * 1024
+APP_VIEWS = {
+    "/app/overview": ("overview", "Overview"),
+    "/app/revisions": ("revisions", "Revisions"),
+    "/app/runs": ("runs", "Runs"),
+    "/app/continuity": ("continuity", "Continuity"),
+    "/app/integrations": ("integrations", "Integrations"),
+}
 
 
 class DeltaWebApp:
@@ -37,7 +46,11 @@ class DeltaWebApp:
         path = environ.get("PATH_INFO", "/")
         try:
             if path == "/" and method == "GET":
-                return self._respond_html(environ, start_response)
+                return self._respond_landing(environ, start_response)
+            if path == "/app" and method == "GET":
+                return self._redirect(start_response, "/app/overview")
+            if path in APP_VIEWS and method == "GET":
+                return self._respond_app(environ, start_response, *APP_VIEWS[path])
             if path.startswith("/static/") and method == "GET":
                 return self._respond_static(path, start_response)
             if path == "/api/state" and method == "GET":
@@ -61,8 +74,22 @@ class DeltaWebApp:
                 503,
             )
 
-    def _respond_html(self, environ: dict[str, Any], start_response: Callable[..., Any]):
-        body = TEMPLATE_PATH.read_bytes()
+    def _respond_landing(self, environ: dict[str, Any], start_response: Callable[..., Any]):
+        body = LANDING_TEMPLATE_PATH.read_bytes()
+        headers = [("Content-Type", "text/html; charset=utf-8"), ("Cache-Control", "no-store")]
+        if self._cookie(environ, "delta_csrf") != self.csrf_token:
+            headers.append(("Set-Cookie", f"delta_csrf={self.csrf_token}; Path=/; SameSite=Strict"))
+        start_response("200 OK", headers)
+        return [body]
+
+    def _respond_app(self, environ: dict[str, Any], start_response: Callable[..., Any], view: str, title: str):
+        document = APP_TEMPLATE_PATH.read_text()
+        document = document.replace("{{VIEW}}", view).replace("{{PAGE_TITLE}}", title)
+        for candidate in ("overview", "revisions", "runs", "continuity", "integrations"):
+            document = document.replace(f"{{{{ACTIVE_{candidate.upper()}}}}}", "active" if candidate == view else "")
+            document = document.replace(f"{{{{CURRENT_{candidate.upper()}}}}}", 'aria-current="page"' if candidate == view else "")
+            document = document.replace(f"{{{{HIDDEN_{candidate.upper()}}}}}", "" if candidate == view else "hidden")
+        body = document.encode()
         cookie = self._cookie(environ, "delta_csrf")
         headers = [("Content-Type", "text/html; charset=utf-8"), ("Cache-Control", "no-store")]
         if cookie != self.csrf_token:
@@ -70,13 +97,25 @@ class DeltaWebApp:
         start_response("200 OK", headers)
         return [body]
 
+    @staticmethod
+    def _redirect(start_response: Callable[..., Any], location: str):
+        start_response("302 Found", [("Location", location), ("Cache-Control", "no-store")])
+        return [b""]
+
     def _respond_static(self, path: str, start_response: Callable[..., Any]):
         relative = path.removeprefix("/static/")
-        if relative not in {"styles.css", "app.js"}:
+        content_types = {
+            "styles.css": "text/css; charset=utf-8",
+            "app.js": "text/javascript; charset=utf-8",
+            "landing.css": "text/css; charset=utf-8",
+            "landing.js": "text/javascript; charset=utf-8",
+            "logo.svg": "image/svg+xml",
+            "favicon.svg": "image/svg+xml",
+        }
+        if relative not in content_types:
             return self._json(start_response, {"status": "error", "message": "Static asset not found."}, 404)
         asset = STATIC_ROOT / relative
-        content_type = "text/css; charset=utf-8" if relative.endswith(".css") else "text/javascript; charset=utf-8"
-        start_response("200 OK", [("Content-Type", content_type), ("Cache-Control", "no-cache")])
+        start_response("200 OK", [("Content-Type", content_types[relative]), ("Cache-Control", "no-cache")])
         return [asset.read_bytes()]
 
     def _handle_state(self, environ: dict[str, Any], start_response: Callable[..., Any]):

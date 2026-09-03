@@ -14,7 +14,32 @@ Deterministic fixtures are allowed for local planner and failure-state demonstra
 
 ## Local Phase 5 demonstration
 
-Start the server with `.venv/bin/python run_demo.py`, then open `http://127.0.0.1:8000`. The page is explicitly marked `Local fixture mode`. Preview, execute, and restore use the real Delta engine and Sibyl store, while the launch-package services are input-sensitive deterministic fixtures. Their outputs, source labels, and cost status must remain visible as fixture evidence. Do not describe this path as live ACP, provider, wallet, job, or Base evidence. The spending approval, reconciliation, and settlement actions stay unavailable until a separately approved live integration is attached.
+Start the server with `.venv/bin/python run_demo.py`, then open `http://127.0.0.1:8000`. The public page contains a clearly labelled illustrative revision. Open `/app/revisions` through the primary call to action for the working demonstration. The application is marked `Demo mode`. Preview, execute, and restore use the real Delta engine and Sibyl store, while the launch-package services are input-sensitive deterministic fixtures. Their outputs, source labels, and cost status must remain visible as fixture evidence. Do not describe this path as live ACP, provider, wallet, job, or Base evidence. Paid provider actions stay unavailable until a separately approved live integration is attached.
+
+## Current recording path
+
+Until the live ACP capture and artifact checks are complete, record the local
+product walkthrough rather than presenting it as a completed partner demo.
+
+Use a fresh project ID such as `video-walkthrough` or point
+`DELTA_DEMO_MEMORY_PATH` at a new local database. Start the server, open the
+printed URL, and show these beats in one session:
+
+1. The public product story, its `Illustrative revision` label, and the working `Open workspace` call to action.
+2. The application `Demo mode` badge and editable launch-package inputs at `/app/revisions`.
+3. Preview with the initial values. Show `Rerun` for the first two steps and
+   `Pending dependency` for translation.
+4. Execute the deterministic workflow. Show the input-sensitive fixture
+   outputs, the zero live spend, and the persisted result labels.
+5. Change only the launch date and preview again. Show visual `Reuse`,
+   announcement `Rerun`, and translation waiting for the new announcement.
+6. Execute the revised workflow, then open Runs to show the saved step states.
+7. Open Continuity and use `Restore saved work` to show persisted outputs.
+8. Open Integrations and point out that provider actions are unavailable in demo mode.
+
+If external ACP or Base evidence is shown separately, label it as recorded
+external evidence and do not imply that it completed during this local UI
+segment. The live Phase 7 and final submission gates remain separate.
 
 ## Phase 6 baseline evidence
 
@@ -33,6 +58,9 @@ Do not record the final judge demo until:
 - secrets have been removed from UI/log output
 - README points to Sibyl critical read/write paths
 - `STATE.md` accurately states remaining limitations
+- no known open ACP attempt remains unresolved. The current Aaga job `75773`
+  is open and unfunded because the provider rejected the installed CLI's
+  requirement envelope, so it must be reconciled before any replacement run.
 
 ## Required evidence bundle
 

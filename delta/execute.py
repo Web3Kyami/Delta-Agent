@@ -221,6 +221,10 @@ class DeltaEngine:
                         input_signature=attempt.input_signature,
                         provider_job_id=attempt.provider_job_id,
                         provider_chain_id=attempt.provider_chain_id,
+                        provider_id=attempt.provider_id,
+                        offering_id=attempt.offering_id,
+                        offering_name=attempt.offering_name,
+                        requirements_signature=attempt.requirements_signature,
                     )
                     self.store.save_attempt(succeeded)
                     self.store.set_active_attempt(step.id, None)
@@ -261,6 +265,10 @@ class DeltaEngine:
                         provider_job_id=attempt.provider_job_id,
                         provider_chain_id=attempt.provider_chain_id,
                         error_code="EXECUTOR_FAILED",
+                        provider_id=attempt.provider_id,
+                        offering_id=attempt.offering_id,
+                        offering_name=attempt.offering_name,
+                        requirements_signature=attempt.requirements_signature,
                     )
                     self.store.save_attempt(failed)
                     self.store.set_active_attempt(step.id, None)

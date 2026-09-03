@@ -1,11 +1,11 @@
 # Delta State
 
-Last updated: 2026-09-03 (Phase 7 executed end-to-end on Base mainnet; Phase 8 evidence + docs complete)
+Last updated: 2026-09-03 (brand and product interface build)
 
 ## Completed
 
 - Product direction finalized: revision planning, persistent paid-work records, and paid-job continuity.
-- Planning architecture selected: small Python revision/DAG engine, Sibyl authoritative persistence, Virtuals ACP CLI adapter, Base settlement evidence, minimal web demonstration.
+- Planning architecture selected: small Python revision/DAG engine, Sibyl authoritative persistence, Virtuals ACP CLI adapter, Base settlement evidence, and a focused web operations workspace.
 - Official starting references reviewed for hackathon rules, submissions, Sibyl Memory, Virtuals ACP, LangGraph caching/persistence, and Base network documentation.
 - Repository planning package drafted.
 - Phase 0 workspace review found only planning documents, with no application source, package metadata, tests, selected framework, or license file at that time.
@@ -23,13 +23,18 @@ Last updated: 2026-09-03 (Phase 7 executed end-to-end on Base mainnet; Phase 8 e
 - Read-only ACP discovery succeeded under `ACP_ONLY` for image generation, announcement and marketing copywriting, and translation, both without a chain filter and with Base chain ID `8453`. No job or transaction command was run.
 - The live browse response shape is `{data: [...]}` with agent identity, public EVM address, role, cluster, rating, nested chain records, and nested offering records containing IDs, requirements, deliverable, SLA, pricing, funding flag, and hidden flag. The `--online online` filter returned records, but the response has no separate online-status field.
 - `delta.providers.acp` now normalizes that browse shape, accepts both object and string requirement schemas observed live, preserves explicit unknown availability, and defaults ordinary browse to no chain filter. A labelled marketplace fixture and malformed-shape tests cover the contract.
-- Phase 5 demonstration interface implemented as a minimal server-rendered WSGI page. It keeps the revision engine and Sibyl store on the server, labels deterministic fixture mode, and leaves live ACP actions unavailable until a real provider job is attached.
+- Phase 5 demonstration interface implemented as a branded server-rendered operations workspace. It keeps the revision engine and Sibyl store on the server, labels deterministic fixture mode, and leaves live ACP actions unavailable until a real provider job is attached.
+- Delta now has a documented product identity, code-native SVG logo and favicon, a public product site, and separate application routes for Overview, Revisions, Runs, Continuity, and Integrations. `DESIGN.md` owns the page map, brand system, interaction rules, information architecture, research basis, and staged interface roadmap.
+- The public site has working calls to action and an interactive revision example labelled as illustrative. The example changes the visible keep, run-again, and waiting states without claiming provider execution. Application navigation changes server routes instead of scrolling through a long page.
+- Runs renders the latest step decisions from the real state response. Continuity restores and lists actual saved outputs with output details behind progressive disclosure. Implementation names are kept on Integrations or inside technical evidence rather than repeated throughout the primary task.
+- Revision metrics, run state, generated time, and memory status are derived from the same API payload as the plan. Busy controls use real request state, block duplicate activation, expose `aria-busy`, and respect reduced-motion preferences. No new live provider or chain success state was introduced.
 - The Phase 5 interface supports project-scoped inputs, preview, execute, restore, decision reasons, cost separation, restart recovery messaging, escaped dynamic content, CSRF-protected state changes, and honest unavailable live-action responses.
 - The interface now invalidates the current plan as soon as an input changes and explains that a fresh preview is required, while the server continues to reject stale or missing plans.
 - When all current steps are reusable, the execute control stays disabled and explains that an input change plus a new preview is required before more work exists to run.
 - Phase 6 comparison harness implemented in `delta.baseline` with current LangGraph `StateGraph`, node `CachePolicy`, SQLite cache, and SQLite checkpointer APIs. The harness is optional and separate from the Delta runtime.
-- **Phase 7 executed end-to-end on Base mainnet.** A real Aaga `content_generation` job (ID 75656) was created, funded with 0.01 USDC, delivered, and settled by the evaluator. The on-chain artifact hash `0x5c970be4...` matches the artifact reference stored in Delta's local Sibyl DB. A fresh-process restart test re-reads the completed work purely from disk + DB. See `.evidence/phase7_evidence.md` and `tests/test_phase7_live.py`.
-- **Phase 8 complete**: evidence bundle, README rewrite, version pinning in `REFERENCES.md`, and updated `HANDOFF.md` for the next builder.
+- Phase 7 has independently checked external ACP and Base evidence for Aaga job `75656`. A fresh authenticated history read returned the completed job and exact provider deliverable. Delta parsed and persisted that live observation without creating a reusable work result. The paid execution-to-reusable-work path and settlement ingestion remain unverified, and settlement accounting was corrected during the audit.
+- The ACP adapter now has an explicit reusable-work finalization boundary. It requires a non-fixture completed record, matching persisted job/provider/offering/chain/requirements identity, independently verified deliverable-hash evidence, a successful settlement receipt, and an available artifact resolution before saving a WorkResult. Fixture observations and completed status alone remain non-reusable.
+- Phase 8 is not complete. The test suite and documentation have been audited, live history and protocol hash integrity are verified, but live paid-path wiring, tracked evidence, and submission packaging remain open.
 
 ## Phase status
 
@@ -38,10 +43,10 @@ Last updated: 2026-09-03 (Phase 7 executed end-to-end on Base mainnet; Phase 8 e
 - Phase 2: Verified. The real Sibyl client is authoritative for the persisted records exercised by the recovery tests.
 - Phase 3: Verified. Runtime behavior passes through the real Sibyl store with clearly labelled deterministic executors. No live provider or payment path is claimed.
 - Phase 4: Verified for the no-spend implementation gate. The adapter, browse response normalization, artifact safeguards, conservative reconciliation, and real Sibyl restart path pass labelled fixture tests. Live job lifecycle, provider execution, and payment evidence remain separately unverified.
-- Phase 5: Partially complete. The local deterministic interface and Sibyl-backed preview, execution, changed-input, error, unavailable-action, fresh-process serializer, responsive, and keyboard paths are verified. Live provider, approval, reconciliation, and settlement states remain unverified and cannot be established by fixtures.
+- Phase 5: Partially complete. The branded local interface and Sibyl-backed preview, execution, changed-input, error, unavailable-action, fresh-process serializer, responsive, and keyboard paths are verified. Live provider, approval, reconciliation, and settlement states remain unverified and cannot be established by fixtures.
 - Phase 6: Verified. The reproducible LangGraph baseline matches Delta's measured call counts for the configured comparison cases. It does not claim Delta has unique selective caching, TTL, or restart persistence.
-- **Phase 7: Verified.** Live Aaga ACP service-only job executed on Base mainnet (job 75656), funded (0.01 USDC) and settled (0.009 USDC to provider, 0.001 USDC refund). Deliverable hash matches the on-chain `Submitted` event. Persistence + restart test pass. See `.evidence/phase7_evidence.md`.
-- **Phase 8: Verified.** Evidence bundle, README rewrite (live status, not "staged"), pinned versions in `REFERENCES.md`, `HANDOFF.md` current. Test suite: 60 passed, 15 subtests passed.
+- **Phase 7: Partially verified and blocked.** Base receipts confirm job `75656` creation, funding of 0.01 USDC, provider submission, and settlement. The receipts show 0.009 USDC to the provider, 0.0005 USDC to Delta, and 0.0005 USDC to another recipient. A fresh authenticated ACP history read returned the same completed job, and the exact provider deliverable string matched the onchain hash under the official ACP EVM Keccak rule. Delta parsed and persisted the live observation in a disposable Sibyl scope as `reconciliation_required`, without creating a reusable WorkResult. Live paid execution through Delta, settlement ingestion, and reusable artifact persistence remain unverified.
+- **Phase 8: Partially complete and blocked.** The current suite passes with 73 tests and 15 subtests. Live ACP history, adapter observation capture, protocol hash verification, and the explicit local finalization safety boundary now pass. Reproducible tracked evidence, live paid execution-to-reusable-work proof, and final submission packaging remain incomplete.
 
 ## Verified
 
@@ -85,7 +90,7 @@ Last updated: 2026-09-03 (Phase 7 executed end-to-end on Base mainnet; Phase 8 e
 - A create response with a mismatched chain is recorded as ambiguous rather than accepted as the requested job.
 - ACP spend reservations were persisted in Sibyl and cumulative caps, scope, currency, and action checks blocked before the transport call where approval was invalid.
 - Read-only history, watch, deliverable lookup, and known-job reconciliation tests consumed returned fixture response data rather than constants.
-- A fresh child process recovered a funded-state ACP attempt from Sibyl, queried its persisted provider job ID through the adapter, and recorded the returned lifecycle state. The fixture was still explicitly marked as fixture evidence.
+- A fresh child process recovered a recorded ACP observation from Sibyl. The observation was parsed and persisted through the adapter boundary, while the fixture remained explicitly marked as fixture evidence and no reusable work result was created.
 - Artifact handling now creates generated local identifiers, confines local files to the configured artifact root, permits only credential-free HTTPS for remote resolution, enforces size and timeout limits, and verifies content hashes before returning an available reference.
 - Reconciliation matching now returns `attach`, `manual`, or `blocked`. It never selects the first candidate when there are zero, multiple, missing-identity, or conflicting provider, offering, chain, requirements, or transaction matches.
 - The installed ACP guidance and browse help describe browse as a marketplace search operation with `--chain-ids` filtering and state that authenticated users can browse without onchain signing. Under the owner-approved `ACP_ONLY` policy, the same CLI returned live browse data without a transaction prompt.
@@ -108,38 +113,73 @@ Last updated: 2026-09-03 (Phase 7 executed end-to-end on Base mainnet; Phase 8 e
 - Phase 7 ready: gas + USDC both present. Live `acp client create-job` is no longer blocked.
 - Wallet is **Privy-hosted** (`"provider":"PRIVY"` per `acp agent whoami`). The raw private key is not on this machine; outbound moves go through `acp client transfer` (Privy signing) or via the Privy dashboard directly.
 
-## Phase 7 execution (2026-09-02 23:00–23:13 UTC, completed)
+## Phase 7 external evidence (2026-09-02 23:00 to 23:13 UTC)
 
 - **Job created** against Aaga `content_generation` (`019d7c71-44c9-7329-bcf6-3edb953d6711`), Base 8453, `requirements` envelope shape `{"name":"content_generation","requirement":{"topic":"AI agents in DeFi","content_type":"blog_post",...}}`. Job ID `75656`. Tx `0x7cad...` at block 50799657.
 - **Budget set** to 0.01 USDC by the provider. Tx `0x6b86...` at block 50799739.
 - **Funded** by Delta. Tx `0xd1d284d10916bc90934b876cec1ee3242a27de026bbd2b8191d532071f48425d` at block 50799772, USDC `Transfer(10000)` from Delta to ACP Core v2 escrow `0x238e541bfefd82238730d00a2208e5497f1832e0`.
 - **Delivered** by the provider. Tx `0xd393763b6560a80d49317f7f11edf9ab349835aa0420ee4c928e5dd1a1dda445` at block 50799774. The `Submitted` event data field carries the deliverable hash `0x5c970be48a64875341e4596c4f6d3b8c34c2df2680d9f0a2d6a6cc96c2ec29f8`. The deliverable was a 159-word blog post.
-- **Settled** by the evaluator. Tx `0x1062a1b78bf8e5686894e9e091b4b857559b784bf8a24f8f0177067957788ff8` at block 50800070: USDC `Transfer(9000)` escrow → provider, USDC `Transfer(500)` escrow → Delta (refund), `JobCompleted` event. Net spend: 0.001 USDC (platform fee).
-- **Persisted** in Delta's local Sibyl store under scope `delta-local-demo/phase7-live-acp-75656`: one `WorkResult`, one `ExecutionAttempt`, one `ExecutionEvent`.
-- **Restart test passed**: fresh Python process loaded the same scope from disk and re-read every field of the completed job, including the on-chain artifact hash. Script: `scripts/restart_test.py`. Hermetic equivalent: `tests/test_phase7_live.py` (3/3 passing).
-- **Bypass note**: the `acp client complete` command returned `SESSION_NOT_FOUND` in a fresh process (the CLI's local session map does not get populated across invocations when the REST `getActiveJobs` indexer lags). The settled state was reached by calling `agent.internalComplete(...)` directly through the bundled `acp-node-v2` SDK, which is the documented internal entry point. This is recorded in `REFERENCES.md` under the Phase 7 API surface.
+- **Settled** by the evaluator. Tx `0x1062a1b78bf8e5686894e9e091b4b857559b784bf8a24f8f0177067957788ff8` at block 50800070: USDC `Transfer(9000)` escrow to provider, `Transfer(500)` escrow to Delta, and `Transfer(500)` escrow to another recipient, plus a `JobCompleted` event. Delta's wallet service outflow was 0.0095 USDC before gas. The prior 0.001 USDC Delta refund claim was incorrect.
+- **Stored locally** under scope `delta-local-demo/phase7-live-acp-75656` by a manual metadata-persistence script. The script does not call ACP or Base, and its record is not live Delta-path evidence.
+- **Restart check limitation**: a fresh Python process can read the recorded observation from the local database, but that does not prove that the live job was captured through Delta or that the artifact is reusable. The updated script now reports this state as blocked.
+- **CLI limitation**: `acp client complete` returned `SESSION_NOT_FOUND` in a fresh process. The job later settled through a bundled SDK call outside the tracked Delta adapter path. This is an integration reproducibility blocker, not a verified Delta completion path.
+
+## Audit correction (2026-09-03)
+
+- Independent Base receipt reads confirm the recorded transaction sequence and the provider-attested deliverable hash in the ACP `Submitted` event.
+- The local generic SHA-256 digest recorded in `.evidence/08_deliverable_hash.txt` differs from the provider-attested ACP Keccak hash. This is an algorithm distinction, not a provider-byte mismatch. The exact provider deliverable string now matches the attestation under the official ACP EVM hash rule, but Delta must still keep it non-reusable until the live execution, settlement, artifact, and WorkResult paths are exercised together.
+- `scripts/persist_phase7.py` and `tests/test_phase7_live.py` use sanitized recorded response-shape fixtures. The script now routes create and history data through the ACP parser and observation boundary, writes no WorkResult, and does not establish a live integration.
+- `.evidence/` and `.delta/` are ignored by Git. A clean clone contains neither the evidence bundle nor the local database that the old README described as proof.
+- The implementation has been extended to parse the observed compact create receipt and nested history fields, and paid ACP command arguments now carry the requested chain ID. These changes are fixture-tested, not live execution evidence.
+- Persisted ACP attempts now retain provider ID, offering ID and name, chain identity, and a requirements signature. Restart reconciliation blocks when returned provider, offering, job, chain, requirements, or source identity conflicts with the stored intent.
+- ACP `completed` provider status now maps to local `reconciliation_required` until deliverable and settlement evidence are independently validated. It cannot create a reusable result by status alone.
+- Follow-up verification passed with `72 passed, 15 subtests passed` in `14.42s`. The adapter tests cover the provider requirement-envelope correction, reusable-work finalization boundary, and HTTPS-only artifact redirects. Recorded observation import writes only an active ACP attempt and journal event, and the fresh-process reader returns `BLOCKED` as intended.
+
+## Live ACP and artifact verification (2026-09-03)
+
+- The official `@virtuals-protocol/acp-cli@1.0.34` was invoked through Delta's configured argument-array `npx` transport with `TS_KEYRING_BACKEND=file`. The active Delta agent remained on the restricted `ACP_ONLY` signer policy.
+- `ACPAdapter.job_history("75656", chain_id=8453)` returned the real completed ACP job. The parsed record contained job `75656`, Base chain `8453`, Aaga provider `0xB0aCA700745a989A1CB859eeCfE0fD9Afbc066AA`, offering `content_generation`, the provider deliverable, and its attested hash.
+- The live record was persisted through `ACPAdapter.record_observation(..., source=ACPObservationSource.LIVE)` in a disposable real Sibyl scope. The attempt restored as `reconciliation_required` and no WorkResult was created. This proves live observation capture, not live paid execution or reusable-work completion.
+- The exact 2,650-byte UTF-8 deliverable string returned by ACP was hashed with the official ACP EVM implementation rule, `keccak256(toHex(deliverable))`. The computed hash matched both the ACP history hash and the onchain `Submitted` event hash.
+- The generic local artifact-store SHA-256 digest remains recorded separately. Its difference from the ACP Keccak hash is expected and must not be reported as a provider-byte mismatch.
+- A fresh Base-filtered browse through the same adapter returned current candidates for image generation and announcement. A dedicated translation offering was not identified in the current `translation` or `translate text` result sets, so translation mapping remains unverified.
+- Current Base-filtered browse counts were `5 agents / 46 offerings` for `image generation` with `--top-k 5`, `5 / 35` for `content writing` with `--top-k 5`, `6 / 49` for `translation` with `--top-k 20`, and `20 / 167` for `translate text` with `--top-k 20`. The latter two result sets surfaced no dedicated translation offering. Search ranking is dynamic, so these are dated observations rather than hardcoded provider configuration.
+- Current credible Base candidates are Syeollanga-claw (`019e524e-befb-7693-8f66-7d0856b2ca96`, `0x3e2b694d4a02b275d2b63cfb72586a99a8830577`) `ai_image_generation` (`019e524e-dbdc-7690-a771-6f70d44600f8`) at `0.05` USDC fixed with a required `prompt` and optional `width`, `height`, and `negativePrompt`, SLA 5 minutes; Artelier (`019dca55-e2d8-7234-9617-1deb6f8b48ae`, `0xdfb85530b68ca280a95beff117fd1ea7b1bb1038`) `super_image_gen` (`019dca56-1078-7d34-a619-965ad14efabd`) at `0.5` USDC fixed with required `prompt`, SLA 5 minutes; and Aaga (`019d7c71-1c9a-7969-ac65-c36b597519b7`, `0xb0aca700745a989a1cb859eecfe0fd9afbc066aa`) `content_generation` (`019d7c71-44c9-7329-bcf6-3edb953d6711`) at `0.01` USDC fixed with required `topic` and `content_type`, publication-ready content output, SLA 5 minutes. GSB Thread Writer (`019d7565-5b56-778e-8550-66ec4b179a81`, `0x2c281b4ba71e79dd91e3a9d78ed5348bc5774df9`) `write_thread` (`019d780b-0b26-7966-b540-28ea9c05a0b7`) appeared at `0.1` USDC fixed with required `topic`, array-of-tweets output, and a 5-minute SLA.
+
+## Live validation attempt (2026-09-03)
+
+- The approved live scope was one Aaga `content_generation` job on Base `8453`, with a maximum service amount of `0.01 USDC` plus gas. The read-only preflight confirmed signer policy `ACP_ONLY`, wallet balance `0.0905 USDC`, and the same fixed-price offering.
+- Delta created ACP v2 job `75773` through `ACPAdapter.create_job`. The real receipt returned `success: true`, `protocol: "v2"`, provider `0xb0aca700745a989a1cb859eecfe0fd9afbc066aa`, offering `content_generation`, chain `8453`, and no transaction hash in the compact response.
+- The installed official CLI sent the first requirement as `contentType: "requirement"` but without the required outer `name`. Aaga returned the real error `Malformed requirement for content_generation`. The same envelope was then sent through the official message command as `text`, `structured`, and runtime-supported `requirement` content types. History recorded all three corrections, but the provider did not emit `budget.set` or advance the job beyond `open` during the bounded wait.
+- The current history response is `{jobId, chainId, protocol, status, entryCount, entries}`. Job `75773` remains `open` with six entries, no budget, no funding, no deliverable, and no transaction hashes. No USDC moved and no completion command was run.
+- Delta reconciled job `75773` through the real history path and persisted the attempt as `active` with the job and chain identity in the disposable Sibyl scope. No WorkResult or artifact was created.
+- The installed `acp job watch` help documents `--job-id` and `--timeout`, but passing the documented history chain flag to `job watch` returned `unknown option '--chain-id'`. The live validation wrapper now uses history for chain-scoped recovery and blocks funding unless history reports `budget_set` with a valid matching amount.
+- `scripts/live_acp_validation.py` is an operator-gated, real-ACP validation helper. Its `create`, `fund`, and `complete` paths require an explicit approval flag, and funding and completion are blocked until the required live history states exist.
+- The negative funding guard was exercised against real job `75773` with the requested `0.01` amount. It returned `Funding is blocked until ACP history reports budget_set` before invoking the funding transport.
 
 ## Unverified
 
-- Exact JSON response fields for current ACP job creation, funding, completion, history, and transaction hashes remain unverified. The live response verification covered marketplace browse only.
+- Exact live JSON fields are now verified for browse and history, including the current nested history entries. Funding and completion response shapes, direct transaction-hash fields, and a live adapter round trip through paid Delta execution remain unverified.
 - The browse response does not provide an independent online-status field. The records are evidence that the authenticated query with `--online online` returned them, not proof of a separately reported provider heartbeat.
-- Base qualification findings remain limited to the documented chain and hackathon requirements. No deployment or transaction evidence exists.
+- Base qualification is still separate from this ACP receipt evidence. No Delta deployment exists, and the hackathon's final acceptance of this single ACP-on-Base flow for both partner stacks remains unconfirmed.
 - It is not confirmed that one ACP job funded/settled on Base will be accepted by hackathon judges as evidence for both the Virtuals and Base partner stacks.
 - Practical maximum safe entity/reference body sizes beyond the tested `421` byte work record remain unverified.
-- No OSI-approved license file has been selected yet.
+- Apache-2.0 is present in `LICENSE` and is the selected OSI-approved license.
 - The final ACP provider mapping for the launch-package workflow is not locked.
-- No Base balance or spending budget has been verified. The Delta ACP agent and restricted signer identity are configured, but no transaction authorization or monetary action is approved.
+- The recorded job used an owner-funded wallet. No new transaction or spending action is approved by the current audit.
 - The ACP CLI is not installed as a project command and is being invoked through the current npm package. LangGraph and FastAPI are not installed in the workspace. Python 3.12.3 and Node 26.7.0 are available.
-- Live provider execution, ACP lifecycle reconciliation, and network-cost evidence are not yet connected to the runtime.
+- Live provider execution, paid ACP lifecycle reconciliation, settlement ingestion, reusable WorkResult persistence, and network-cost evidence are not yet connected end to end to the runtime. Provider deliverable hash integrity is verified separately.
+- The new live job `75773` does not provide a usable provider budget or deliverable. It is an open, unfunded attempt blocked by the CLI/provider requirement-envelope discrepancy. It must be reconciled before any replacement job is considered.
+- The live validation attempt did not reach artifact verification, funding, completion, settlement, or live reusable-work persistence. The only verified deliverable artifact remains the separately recorded external job `75656`.
 - Phase 4 live provider and offering consistency checks against requested create-job inputs are not yet verified. The adapter-level chain mismatch case is covered by a fixture test.
-- Live funded-job reconciliation and chain receipt evidence remain unverified. The no-spend suite covers a known funded fixture after a fresh process, malformed and conflicting provider records, safe artifact paths and URLs, and zero or multiple matching replacement candidates.
-- Phase 4 real ACP browse response shape is verified under `ACP_ONLY`. Real history and job response shapes remain unverified because no paid job was created.
-- ~~Phase 4 live provider execution and chain receipt evidence remain unverified.~~ **RESOLVED by Phase 7** (see "Phase 7 execution" section above).
-- ~~Live ACP service-only job execution on Base mainnet.~~ **RESOLVED by Phase 7** (job 75656, Aaga `content_generation`, 0.01 USDC funded and settled).
-- ~~Cold-start restart resume of a paid ACP job from the local Sibyl store.~~ **RESOLVED by Phase 7** (`scripts/restart_test.py` PASS, `tests/test_phase7_live.py` 3/3 PASS).
+- Live funded-job reconciliation and chain receipt ingestion remain unverified in the runtime. The no-spend suite covers labelled fixtures and safe failure behavior; the recorded response shape now passes through the adapter, but not through a live Delta engine execution or chain receipt importer.
+- Phase 4 real ACP browse, create receipt, and history shapes are represented by labelled sanitized fixtures, and the current browse/history transport has also been exercised live. This does not prove a live paid job lifecycle round trip.
+- The recorded provider deliverable passes protocol-level hash verification. Runtime reusable-artifact verification remains unverified because the live observation path intentionally does not create a WorkResult and Delta's generic artifact store uses SHA-256 references.
 - The pending approval request exposed only a wallet approval URL, approval ID, and `RPC request denied due to policy violation` in CLI output. Chain, destination, method, value, token amount, and gas were not exposed by the CLI, and the dashboard page could not be safely inspected through the available browser tool. No approval was opened.
 - The earlier `RPC request denied due to policy violation` browse discrepancy was resolved for discovery by the owner-approved `ACP_ONLY` policy change. No exact official issue was found for the earlier behavior. No further investigation is needed for Phase 4.
 - Phase 5 focused tests passed with 5 tests, including a genuinely new Python process that restored the UI state serializer from the same Sibyl store. Chromium inspection covered 375, 768, 1024, and 1440 CSS pixel widths; no unintended horizontal overflow was observed.
+- The rebuilt Phase 5 interface was rechecked on 2026-09-03 at 390, 768, 1024, and 1440 CSS pixel widths. The public site, product illustration, SVG identity, favicon, application routes, compact navigation, Overview, Revisions, Runs, Continuity, and Integrations screens rendered without observed horizontal overflow. Both JavaScript files passed syntax validation, the 6 focused web tests passed, and the full suite passed with 73 tests plus 15 subtests.
+- A browser-level route and interaction audit selected the Visual brief example on the public site and observed `Run again`, `Keep`, `Keep`. In Revisions, a fresh project preview returned `Rerun`, `Rerun`, `Pending dependency`; execution returned three labelled fixture outputs and disabled repeat execution; changing only the launch date invalidated the old plan and returned `Reuse`, `Rerun`, `Pending dependency`; Continuity restored three saved outputs. These states came from the running UI and real local API path.
 - The Phase 5 UI positive path ran preview, deterministic execution, persisted outputs, and restore. A changed launch date produced visual reuse, announcement rerun, and translation pending dependency. Invalid project input and missing CSRF produced honest errors, and reconcile, spending approval, and settlement returned blocked or unavailable responses.
 - A local Chromium keyboard audit passed the primary workflow. Tab reached the page controls, Enter activated Preview and Execute, an invalid required field moved focus to `error-summary`, and Enter on Restore loaded the persisted Sibyl state. The audit used no live or paid action.
 - Phase 7 no-spend preflight was completed on 2026-09-02 with the official ACP CLI `1.0.34`. The split `configure complete` command returned `authenticated`. The default native keychain path first returned `KeyRevoked`, so the CLI was run with its supported encrypted file keychain backend, `TS_KEYRING_BACKEND=file`. This changed local credential storage selection only. It did not bypass signer policy or authorize spending.
@@ -150,16 +190,17 @@ Last updated: 2026-09-03 (Phase 7 executed end-to-end on Base mainnet; Phase 8 e
 
 ## Blocked
 
-- Phase 1 is complete for the provider-neutral core. Phase 2 and Phase 3 are verified for Sibyl-backed deterministic execution; live external execution is verified by Phase 7.
+- Phase 1 is complete for the provider-neutral core. Phases 2 and 3 are verified for Sibyl-backed deterministic execution. The recorded external ACP/Base run does not make the live Delta execution path verified.
 - No further live ACP job or Base transaction can be performed without explicit user approval of exact provider, chain, action scope, and budget (the same RED gate that released Phase 7).
-- Repository-local documentation cannot be merged because no project repository is available in this environment. The planning files are provided as a standalone package for later copy-in. (`git init` is now in place; the project is local-repo-only.)
-- Phase 0 through Phase 8: implementation, no-spend gates, live ACP execution, restart resume, baseline comparison, evidence bundle, README, and version pinning are all verified. Outstanding work is the user-driven submission step (push to public GitHub, record the 2-5 minute video per `DEMO_RUNBOOK.md`).
+- The project has local Git history and an Apache-2.0 license, but no configured public remote. Public repository setup, the demo video, and required public posts remain outstanding.
+- Phase 7 and Phase 8 remain blocked until the live paid execution path, reusable-work persistence, evidence packaging, and submission requirements are handled honestly.
+- ACP job `75773` is a known open job with no monetary outcome. Do not create a replacement or attempt funding until the provider requirement state is resolved through an officially supported path.
 
 ## Next
 
 When the user dispatches the builder:
 
-1. **Phase 8 is done.** All implementation, tests, live evidence, and docs are in. The remaining work is the user-driven submission step: push to a public GitHub repo under an OSI-approved license (Apache-2.0 already chosen), record the 2-5 minute demo video per `DEMO_RUNBOOK.md`, and submit by 2026-09-10 23:59 UTC.
+1. Finish the live-path audit fixes before calling Phase 7 or Phase 8 complete. The current findings are recorded in this file and the existing local `.evidence/PHASE7_STEP_BY_STEP.md` record. Live read-only capture and protocol hash verification are complete; the remaining gap is live paid execution through Delta with honest settlement and reusable-work persistence.
 2. If the user wants a second live job (e.g. to extend the demo with a visual or a translation step), Aaga `content_generation` is still the cheapest live provider (0.01 USDC). Get explicit approval per RED gate before any new funding.
 3. Keep the live/fixture split honest: do not let any new fixture or test service be presented as a live ACP, Base, or wallet result. The `restart_test.py` and `test_phase7_live.py` patterns are the templates for any future live evidence.
-4. If the user asks to drain the remaining wallet (0.0005 ETH gas + 0.001 USDC refund) to a personal Base address, run `acp client transfer` (Privy signing) after explicit per-action approval — never put a raw key in chat.
+4. If the user asks to drain the remaining wallet, run a read-only balance check first and require explicit per-action approval before any transfer. Never put a raw key in chat.

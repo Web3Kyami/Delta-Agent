@@ -13,13 +13,17 @@ import subprocess
 import threading
 from typing import Any, Mapping, Sequence
 
+from ..artifacts import ArtifactResolution, ArtifactResolutionStatus
 from ..core import (
     ApprovalValidationError,
+    ArtifactReference,
     ExecutionAttempt,
     ExecutionEvent,
     RevisionPlan,
     SpendApproval,
+    WorkResult,
     canonical_json,
+    output_signature,
     validate_spend_approval,
 )
 from ..store import SibylStore
@@ -43,6 +47,13 @@ class ACPCommandStatus(str, Enum):
     TIMEOUT = "timeout"
     PARSE_FAILED = "parse_failed"
     AMBIGUOUS = "ambiguous"
+
+
+class ACPObservationSource(str, Enum):
+    """Identify whether an observation came from ACP or a labelled fixture."""
+
+    LIVE = "live"
+    RECORDED_FIXTURE = "recorded_fixture"
 
 
 @dataclass(frozen=True)
@@ -80,8 +91,16 @@ def redact_text(value: str, secrets: Sequence[str] = ()) -> str:
 class ACPCommandRunner:
     """Run ACP with argument arrays and machine-readable output only."""
 
-    def __init__(self, *, secrets: Sequence[str] = ()) -> None:
+    def __init__(
+        self,
+        *,
+        secrets: Sequence[str] = (),
+        command_prefix: Sequence[str] | None = None,
+    ) -> None:
         self.secrets = tuple(secrets)
+        self.command_prefix = tuple(command_prefix or ())
+        if any(not isinstance(arg, str) or not arg for arg in self.command_prefix):
+            raise ValueError("ACP command prefix must contain non-empty strings")
 
     def run_json(
         self,
@@ -92,7 +111,13 @@ class ACPCommandRunner:
     ) -> ACPCommandResult:
         if not args or any(not isinstance(arg, str) or not arg for arg in args):
             raise ValueError("ACP args must be a non-empty sequence of strings")
-        command = tuple(args) if "--json" in args else tuple(args) + ("--json",)
+        command = tuple(args)
+        if self.command_prefix:
+            if command[0] != "acp":
+                raise ValueError("configured ACP command prefix requires args to start with 'acp'")
+            command = self.command_prefix + command[1:]
+        if "--json" not in command:
+            command = command + ("--json",)
         safe_args = tuple(redact_text(arg, self.secrets) for arg in command)
         try:
             completed = subprocess.run(
@@ -176,7 +201,7 @@ def _lifecycle_state(status: str) -> str:
         "budget_set": "awaiting_approval",
         "funded": "awaiting_provider",
         "submitted": "deliverable_ready",
-        "completed": "succeeded",
+        "completed": "reconciliation_required",
         "rejected": "rejected",
         "expired": "expired",
     }
@@ -199,6 +224,8 @@ class ACPJobRecord:
     fixture: bool = False
     created_at: datetime | None = None
     requirements_signature: str | None = None
+    offering_name: str | None = None
+    deliverable_hash: str | None = None
 
 
 @dataclass(frozen=True)
@@ -361,6 +388,46 @@ class FundingReconciliation:
     reason: str
 
 
+@dataclass(frozen=True)
+class ACPDeliverableVerification:
+    """Evidence that provider bytes match the provider-attested hash."""
+
+    algorithm: str
+    claimed_hash: str
+    computed_hash: str
+    matches: bool
+
+    def __post_init__(self) -> None:
+        for value, label in (
+            (self.algorithm, "algorithm"),
+            (self.claimed_hash, "claimed_hash"),
+            (self.computed_hash, "computed_hash"),
+        ):
+            if not isinstance(value, str) or not value:
+                raise ACPAdapterError(f"{label} is required")
+        if not isinstance(self.matches, bool):
+            raise ACPAdapterError("deliverable verification match must be boolean")
+        if self.matches and self.claimed_hash != self.computed_hash:
+            raise ACPAdapterError("deliverable verification cannot claim a hash match with different hashes")
+
+
+@dataclass(frozen=True)
+class ACPSettlementEvidence:
+    """A separately verified successful Base receipt for settlement."""
+
+    chain_id: int
+    transaction_hash: str
+    receipt_status: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.chain_id, int) or isinstance(self.chain_id, bool) or self.chain_id <= 0:
+            raise ACPAdapterError("settlement chain ID must be a positive integer")
+        if not isinstance(self.transaction_hash, str) or not self.transaction_hash:
+            raise ACPAdapterError("settlement transaction identity is required")
+        if self.receipt_status != "succeeded":
+            raise ACPAdapterError("settlement evidence must have a succeeded receipt")
+
+
 def parse_chain_evidence(payload: Mapping[str, Any] | None) -> ChainEvidence | None:
     """Parse a chain lookup result without inferring success from a hash alone."""
 
@@ -380,7 +447,7 @@ def parse_chain_evidence(payload: Mapping[str, Any] | None) -> ChainEvidence | N
 
 
 def parse_job_record(payload: Mapping[str, Any]) -> ACPJobRecord:
-    """Parse a provider response without treating fixture data as live evidence."""
+    """Parse a provider history or job response without inferring success."""
 
     if not isinstance(payload, Mapping):
         raise ACPParseError("ACP job response must be an object")
@@ -395,19 +462,46 @@ def parse_job_record(payload: Mapping[str, Any]) -> ACPJobRecord:
         raise ACPParseError("ACP job response is missing a valid chain ID")
     provider_id = payload.get("providerId", payload.get("provider_id"))
     offering_id = payload.get("offeringId", payload.get("offering_id"))
+    offering_name = payload.get("offeringName", payload.get("offering_name"))
+    deliverable = payload.get("deliverable")
+    deliverable_hash = payload.get("deliverableHash", payload.get("deliverable_hash"))
+    entries = payload.get("entries", [])
+    if entries is None:
+        entries = []
+    if not isinstance(entries, list):
+        raise ACPParseError("ACP job entries must be an array")
+    (
+        history_provider,
+        history_offering,
+        history_created_at,
+        history_deliverable,
+        history_hash,
+        history_transactions,
+        history_requirements_signature,
+    ) = _history_fields(entries)
+    if provider_id is None:
+        provider_id = history_provider
+    if offering_name is None:
+        offering_name = history_offering
+    created_at = _parse_created_at(payload.get("createdAt", payload.get("created_at"))) or history_created_at
+    if deliverable is None:
+        deliverable = history_deliverable
+    if deliverable_hash is None:
+        deliverable_hash = history_hash
     if provider_id is not None and (not isinstance(provider_id, str) or not provider_id):
         raise ACPParseError("ACP provider identity is malformed")
     if offering_id is not None and (not isinstance(offering_id, str) or not offering_id):
         raise ACPParseError("ACP offering identity is malformed")
-    created_at = _parse_created_at(payload.get("createdAt", payload.get("created_at")))
     requirements_signature = payload.get("requirementsSignature", payload.get("requirements_signature"))
     if requirements_signature is not None and (not isinstance(requirements_signature, str) or not requirements_signature):
         raise ACPParseError("ACP requirements signature is malformed")
+    if requirements_signature is None:
+        requirements_signature = history_requirements_signature
     tx_hashes = payload.get("transactionHashes", payload.get("transaction_hashes"))
     if tx_hashes is None and "transactionHash" in payload:
         tx_hashes = [payload["transactionHash"]]
     if tx_hashes is None:
-        tx_hashes = []
+        tx_hashes = history_transactions
     if not isinstance(tx_hashes, list) or any(not isinstance(item, str) for item in tx_hashes):
         raise ACPParseError("ACP transaction hash metadata is malformed")
     return ACPJobRecord(
@@ -417,17 +511,139 @@ def parse_job_record(payload: Mapping[str, Any]) -> ACPJobRecord:
         chain_id=chain_id,
         provider_status=status,
         delta_state=_lifecycle_state(status),
-        deliverable=payload.get("deliverable"),
+        deliverable=deliverable,
         transaction_hashes=tuple(tx_hashes),
         fixture=payload.get("fixture") is True,
         created_at=created_at,
         requirements_signature=requirements_signature,
+        offering_name=_optional_record_text(offering_name, "ACP offering name is malformed"),
+        deliverable_hash=_optional_record_text(deliverable_hash, "ACP deliverable hash is malformed"),
     )
+
+
+def parse_create_job_response(payload: Mapping[str, Any], *, chain_id: int) -> ACPJobRecord:
+    """Parse the compact create-job receipt returned by ACP v2.
+
+    The observed receipt returns the job ID, provider address, and offering
+    name, but not lifecycle or chain fields. The chain is therefore carried
+    from the explicitly requested command argument and is not treated as an
+    independent provider assertion.
+    """
+
+    if not isinstance(payload, Mapping):
+        raise ACPParseError("ACP create response must be an object")
+    if payload.get("success") is not True:
+        raise ACPParseError("ACP create response does not confirm success")
+    job_id = payload.get("jobId", payload.get("job_id"))
+    provider_id = payload.get("provider", payload.get("providerId", payload.get("provider_id")))
+    offering_name = payload.get("offering", payload.get("offeringName", payload.get("offering_name")))
+    if not isinstance(job_id, str) or not job_id:
+        raise ACPParseError("ACP create response is missing job identity")
+    if not isinstance(provider_id, str) or not provider_id:
+        raise ACPParseError("ACP create response is missing provider identity")
+    if not isinstance(offering_name, str) or not offering_name:
+        raise ACPParseError("ACP create response is missing offering identity")
+    if not isinstance(chain_id, int) or isinstance(chain_id, bool) or chain_id <= 0:
+        raise ACPParseError("requested ACP chain ID is invalid")
+    status = payload.get("status", "open")
+    if not isinstance(status, str):
+        raise ACPParseError("ACP create response lifecycle status is malformed")
+    return ACPJobRecord(
+        job_id=job_id,
+        provider_id=provider_id,
+        offering_id=None,
+        chain_id=chain_id,
+        provider_status=status,
+        delta_state=_lifecycle_state(status),
+        fixture=payload.get("fixture") is True,
+        offering_name=offering_name,
+    )
+
+
+def _history_fields(
+    entries: list[Any],
+) -> tuple[str | None, str | None, datetime | None, Any | None, str | None, list[str], str | None]:
+    provider_id = None
+    offering_name = None
+    created_at = None
+    deliverable = None
+    deliverable_hash = None
+    transactions: list[str] = []
+    requirements_sig = None
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            raise ACPParseError("ACP job entry must be an object")
+        timestamp = entry.get("timestamp")
+        event = entry.get("event")
+        if event is not None and not isinstance(event, Mapping):
+            raise ACPParseError("ACP job event must be an object")
+        if isinstance(event, Mapping):
+            provider = event.get("provider", event.get("providerId", event.get("provider_id")))
+            if provider_id is None and isinstance(provider, str) and provider:
+                provider_id = provider
+            if event.get("type") == "job.created" and created_at is None:
+                created_at = _parse_created_at(timestamp)
+            if event.get("type") == "job.submitted":
+                if "deliverable" in event:
+                    deliverable = event["deliverable"]
+                if isinstance(event.get("deliverableHash"), str):
+                    deliverable_hash = event["deliverableHash"]
+            for key in ("transactionHash", "transaction_hash", "txHash", "tx_hash"):
+                value = event.get(key)
+                if isinstance(value, str) and value:
+                    transactions.append(value)
+        content = entry.get("content")
+        if entry.get("contentType") == "requirement" and isinstance(content, str):
+            try:
+                decoded = json.loads(content)
+            except json.JSONDecodeError:
+                decoded = None
+            if isinstance(decoded, Mapping):
+                requirements_sig = _requirements_signature(decoded)
+        if isinstance(content, str):
+            match = re.search(r"Malformed requirement for ([A-Za-z0-9_.:-]+)", content)
+            if match:
+                offering_name = match.group(1).rstrip(".,;:")
+        for key in ("transactionHash", "transaction_hash", "txHash", "tx_hash"):
+            value = entry.get(key)
+            if isinstance(value, str) and value:
+                transactions.append(value)
+    return (
+        provider_id,
+        offering_name,
+        created_at,
+        deliverable,
+        deliverable_hash,
+        list(dict.fromkeys(transactions)),
+        requirements_sig,
+    )
+
+
+def _optional_record_text(value: Any, message: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise ACPParseError(message)
+    return value
+
+
+def _same_identity(left: str, right: str) -> bool:
+    """Compare opaque IDs exactly and EVM addresses without case sensitivity."""
+
+    if left == right:
+        return True
+    address_pattern = r"^0x[0-9a-fA-F]{40}$"
+    return bool(re.fullmatch(address_pattern, left) and re.fullmatch(address_pattern, right) and left.lower() == right.lower())
 
 
 def _parse_created_at(value: Any) -> datetime | None:
     if value is None:
         return None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError) as error:
+            raise ACPParseError("ACP creation time is malformed") from error
     if not isinstance(value, str):
         raise ACPParseError("ACP creation time is malformed")
     try:
@@ -440,10 +656,12 @@ def match_reconciliation_candidates(
     candidates: Sequence[ACPJobRecord],
     *,
     provider_id: str,
-    offering_id: str,
+    offering_id: str | None,
     chain_id: int,
     requirements_signature: str | None = None,
     expected_transaction_hashes: Sequence[str] = (),
+    offering_name: str | None = None,
+    expected_job_id: str | None = None,
 ) -> ReconciliationDecision:
     """Attach only one candidate with sufficient stable identity evidence."""
 
@@ -453,19 +671,29 @@ def match_reconciliation_candidates(
     plausible = []
     expected_transactions = set(expected_transaction_hashes)
     for candidate in candidates:
+        if expected_job_id is not None and candidate.job_id != expected_job_id:
+            mismatches.append("job")
+            continue
         if candidate.chain_id != chain_id:
             mismatches.append("chain")
             continue
-        if candidate.provider_id is not None and candidate.provider_id != provider_id:
+        if candidate.provider_id is not None and not _same_identity(candidate.provider_id, provider_id):
             mismatches.append("provider")
             continue
-        if candidate.offering_id is not None and candidate.offering_id != offering_id:
+        if offering_id is not None and candidate.offering_id is not None and candidate.offering_id != offering_id:
+            mismatches.append("offering")
+            continue
+        if offering_name is not None and candidate.offering_name is not None and candidate.offering_name != offering_name:
             mismatches.append("offering")
             continue
         if requirements_signature is not None and candidate.requirements_signature not in {None, requirements_signature}:
             mismatches.append("requirements")
             continue
-        if expected_transactions and candidate.transaction_hashes and not expected_transactions.intersection(candidate.transaction_hashes):
+        if expected_transactions and candidate.transaction_hashes and not any(
+            _same_identity(candidate_hash, expected_hash)
+            for candidate_hash in candidate.transaction_hashes
+            for expected_hash in expected_transactions
+        ):
             mismatches.append("transaction")
             continue
         plausible.append(candidate)
@@ -475,7 +703,14 @@ def match_reconciliation_candidates(
     if len(plausible) > 1:
         return ReconciliationDecision(ReconciliationOutcome.MANUAL, None, "multiple ACP jobs match the persisted intent")
     candidate = plausible[0]
-    if candidate.provider_id is None or candidate.offering_id is None:
+    offering_matches = (
+        offering_id is not None and candidate.offering_id == offering_id
+    ) or (
+        candidate.offering_id is None
+        and offering_name is not None
+        and candidate.offering_name == offering_name
+    )
+    if candidate.provider_id is None or not offering_matches:
         return ReconciliationDecision(ReconciliationOutcome.MANUAL, None, "ACP response lacks provider or offering identity needed for safe attachment")
     return ReconciliationDecision(ReconciliationOutcome.ATTACH, candidate, "one ACP job matches provider, offering, chain, and available intent evidence")
 
@@ -503,6 +738,14 @@ def reconcile_funding(record: ACPJobRecord, chain: ChainEvidence | None) -> Fund
 def _spend_key(plan: RevisionPlan) -> str:
     identity = f"{plan.scope.tenant_id}:{plan.scope.project_id}:{plan.plan_id}".encode()
     return "delta/spend/v1/" + hashlib.sha256(identity).hexdigest()
+
+
+def _requirements_signature(requirements: Mapping[str, Any]) -> str:
+    comparable = requirements.get("requirement") if (
+        isinstance(requirements, Mapping)
+        and isinstance(requirements.get("requirement"), Mapping)
+    ) else requirements
+    return "requirements:" + hashlib.sha256(canonical_json(dict(comparable)).encode("utf-8")).hexdigest()
 
 
 _ACP_ACTION_LOCK = threading.RLock()
@@ -611,21 +854,68 @@ class ACPAdapter:
             raise ACPAdapterError("ACP browse response is not a successful JSON object")
         return parse_browse_response(response.data)
 
-    def job_history(self, job_id: str | None = None) -> ACPCommandResult:
+    def job_history(self, job_id: str | None = None, *, chain_id: int | None = None) -> ACPCommandResult:
         args = ["acp", "job", "history"]
         if job_id is not None:
             args.extend(["--job-id", job_id])
+        if chain_id is not None:
+            args.extend(["--chain-id", str(chain_id)])
         return self.runner.run_json(args)
 
-    def watch_job(self, job_id: str) -> ACPCommandResult:
-        return self.runner.run_json(["acp", "job", "watch", "--job-id", job_id])
+    def watch_job(self, job_id: str, *, chain_id: int | None = None) -> ACPCommandResult:
+        args = ["acp", "job", "watch", "--job-id", job_id]
+        if chain_id is not None:
+            args.extend(["--chain-id", str(chain_id)])
+        return self.runner.run_json(args)
 
-    def reconcile_known_job(self, job_id: str) -> ACPJobRecord:
+    def send_requirement(
+        self,
+        job_id: str,
+        *,
+        chain_id: int,
+        offering_name: str,
+        requirements: Mapping[str, Any],
+    ) -> ACPCommandResult:
+        """Send an offering-shaped requirement envelope after provider feedback.
+
+        Some ACP providers require the offering name around the requirements
+        object, while the installed CLI's create command sends only the inner
+        object. This explicit corrective action keeps that discrepancy visible
+        and treats a side-effecting timeout as ambiguous.
+        """
+
+        _optional_record_text(offering_name, "ACP offering name is required")
+        content = canonical_json(
+            {"name": offering_name, "requirement": json.loads(canonical_requirements(requirements))}
+        )
+        return self.runner.run_json(
+            [
+                "acp",
+                "message",
+                "send",
+                "--job-id",
+                job_id,
+                "--chain-id",
+                str(chain_id),
+                "--content-type",
+                "requirement",
+                "--content",
+                content,
+            ],
+            side_effecting=True,
+        )
+
+    def reconcile_known_job(self, job_id: str, *, chain_id: int | None = None) -> ACPJobRecord:
         """Read and map the current provider record before any replacement."""
 
-        return self.parse_response(self.job_history(job_id))
+        return self.parse_response(self.job_history(job_id, chain_id=chain_id))
 
-    def reconcile_attempt(self, step_id: str) -> ACPJobRecord:
+    def reconcile_attempt(
+        self,
+        step_id: str,
+        *,
+        source: ACPObservationSource | str = ACPObservationSource.LIVE,
+    ) -> ACPJobRecord:
         """Recover a persisted active attempt and reconcile its provider job."""
 
         attempt_id = self.store.get_active_attempt(step_id)
@@ -634,16 +924,63 @@ class ACPAdapter:
         attempt = self.store.get_attempt(attempt_id)
         if attempt is None or attempt.provider_job_id is None:
             raise ACPAdapterError("persisted ACP attempt has no provider job identity")
-        record = self.reconcile_known_job(attempt.provider_job_id)
-        if attempt.provider_chain_id is not None and record.chain_id != attempt.provider_chain_id:
-            self._persist_reconciliation(attempt, "ambiguous", record, now=datetime.now(timezone.utc))
-            raise ACPAdapterError("reconciled ACP job chain does not match persisted attempt")
+        record = self.reconcile_known_job(attempt.provider_job_id, chain_id=attempt.provider_chain_id)
+        return self.record_observation(attempt.attempt_id, record, source=source)
+
+    def record_observation(
+        self,
+        attempt_id: str,
+        record: ACPJobRecord,
+        *,
+        source: ACPObservationSource | str = ACPObservationSource.LIVE,
+        now: datetime | None = None,
+    ) -> ACPJobRecord:
+        """Persist an ACP observation without manufacturing work completion.
+
+        A live response may update the persisted job attempt. A recorded fixture
+        may exercise the same parser and persistence boundary only when its
+        source is explicitly labelled. Neither path creates a WorkResult or
+        makes an artifact reusable.
+        """
+
+        source_value = source.value if isinstance(source, ACPObservationSource) else source
+        valid_sources = {item.value for item in ACPObservationSource}
+        if source_value not in valid_sources:
+            raise ACPAdapterError("ACP observation source must be live or recorded_fixture")
+        attempt = self.store.get_attempt(attempt_id)
+        if attempt is None:
+            raise ACPAdapterError("persisted ACP attempt was not found")
+        timestamp = now or datetime.now(timezone.utc)
+        if record.fixture != (source_value == ACPObservationSource.RECORDED_FIXTURE.value):
+            self._persist_reconciliation(attempt, "blocked", record, now=timestamp, source=source_value)
+            raise ACPAdapterError("ACP observation source does not match the response fixture marker")
+        mismatches: list[str] = []
+        if attempt.provider_job_id is not None and attempt.provider_job_id != record.job_id:
+            mismatches.append("job")
+        if attempt.provider_chain_id is not None and attempt.provider_chain_id != record.chain_id:
+            mismatches.append("chain")
+        if attempt.provider_id is not None and record.provider_id is not None and not _same_identity(attempt.provider_id, record.provider_id):
+            mismatches.append("provider")
+        if attempt.offering_id is not None and record.offering_id is not None and attempt.offering_id != record.offering_id:
+            mismatches.append("offering")
+        if attempt.offering_name is not None and record.offering_name is not None and attempt.offering_name != record.offering_name:
+            mismatches.append("offering")
+        if (
+            attempt.requirements_signature is not None
+            and record.requirements_signature is not None
+            and attempt.requirements_signature != record.requirements_signature
+        ):
+            mismatches.append("requirements")
+        if mismatches:
+            detail = ", ".join(sorted(set(mismatches)))
+            self._persist_reconciliation(attempt, "blocked", record, now=timestamp, source=source_value)
+            raise ACPAdapterError(f"reconciled ACP observation conflicts with persisted {detail} identity")
         status = {
-            "succeeded": "succeeded",
+            "completed": "reconciliation_required",
             "rejected": "rejected",
             "expired": "expired",
-        }.get(record.delta_state, "active")
-        self._persist_reconciliation(attempt, status, record, now=datetime.now(timezone.utc))
+        }.get(record.provider_status.lower(), "active")
+        self._persist_reconciliation(attempt, status, record, now=timestamp, source=source_value)
         return record
 
     def get_deliverable(self, job_id: str) -> Any:
@@ -651,6 +988,132 @@ class ACPAdapter:
         if record.deliverable is None:
             raise ACPAdapterError("ACP job has no deliverable to retrieve")
         return record.deliverable
+
+    def finalize_completed_work(
+        self,
+        plan: RevisionPlan,
+        *,
+        step_id: str,
+        implementation_id: str,
+        input_signature: str,
+        attempt_id: str,
+        record: ACPJobRecord,
+        artifact_resolution: ArtifactResolution,
+        deliverable_verification: ACPDeliverableVerification,
+        settlement: ACPSettlementEvidence,
+        fresh_until: datetime | None = None,
+        now: datetime | None = None,
+    ) -> WorkResult:
+        """Persist reusable work only after independent live evidence checks.
+
+        ACP history, provider bytes, a verified artifact, and a successful chain
+        receipt are passed in explicitly. Recorded fixtures and an ACP
+        ``completed`` state alone can never reach the reusable-work boundary.
+        """
+
+        if not isinstance(record, ACPJobRecord):
+            raise ACPAdapterError("ACP finalization requires an ACPJobRecord")
+        if not isinstance(deliverable_verification, ACPDeliverableVerification):
+            raise ACPAdapterError("ACP finalization requires deliverable verification evidence")
+        if not isinstance(settlement, ACPSettlementEvidence):
+            raise ACPAdapterError("ACP finalization requires settlement evidence")
+        if record.fixture:
+            raise ACPAdapterError("recorded ACP fixtures cannot finalize reusable work")
+        if record.provider_status.lower() != "completed":
+            raise ACPAdapterError("ACP job is not in the completed lifecycle state")
+        if record.deliverable is None:
+            raise ACPAdapterError("completed ACP job has no deliverable")
+        if not record.deliverable_hash:
+            raise ACPAdapterError("completed ACP job has no provider deliverable hash")
+        if not deliverable_verification.matches:
+            raise ACPAdapterError("provider deliverable hash verification did not succeed")
+        if not (
+            deliverable_verification.claimed_hash == record.deliverable_hash
+            and deliverable_verification.computed_hash == record.deliverable_hash
+        ):
+            raise ACPAdapterError("provider deliverable hash evidence conflicts with ACP history")
+        if settlement.chain_id != record.chain_id:
+            raise ACPAdapterError("settlement chain does not match the ACP job chain")
+        if not isinstance(artifact_resolution, ArtifactResolution):
+            raise ACPAdapterError("artifact finalization requires an ArtifactResolution")
+        if artifact_resolution.status is not ArtifactResolutionStatus.AVAILABLE:
+            raise ACPAdapterError("artifact is not available and verified for reuse")
+        artifact = artifact_resolution.reference
+        if artifact is None or not artifact.available:
+            raise ACPAdapterError("artifact resolution did not return a reusable artifact reference")
+        if not isinstance(implementation_id, str) or not implementation_id:
+            raise ACPAdapterError("implementation identity is required to finalize work")
+
+        attempt = self.store.get_attempt(attempt_id)
+        if attempt is None:
+            raise ACPAdapterError("persisted ACP attempt was not found")
+        if attempt.scope != plan.scope or attempt.workflow_id != plan.workflow_id:
+            raise ACPAdapterError("ACP attempt does not belong to the requested plan")
+        if attempt.step_id != step_id or attempt.input_signature != input_signature:
+            raise ACPAdapterError("ACP attempt does not match the requested workflow step and input")
+        if attempt.provider_job_id != record.job_id:
+            raise ACPAdapterError("ACP job identity does not match the persisted attempt")
+        if attempt.provider_chain_id != record.chain_id:
+            raise ACPAdapterError("ACP chain identity does not match the persisted attempt")
+        if attempt.status not in {"active", "reconciliation_required"}:
+            raise ACPAdapterError("ACP attempt is not awaiting verified completion")
+        if not attempt.provider_id or not record.provider_id or not _same_identity(attempt.provider_id, record.provider_id):
+            raise ACPAdapterError("ACP provider identity is missing or conflicting")
+        if attempt.offering_id and record.offering_id and attempt.offering_id != record.offering_id:
+            raise ACPAdapterError("ACP offering identity conflicts with the persisted attempt")
+        if attempt.offering_name and record.offering_name and attempt.offering_name != record.offering_name:
+            raise ACPAdapterError("ACP offering name conflicts with the persisted attempt")
+        if not (
+            (attempt.offering_id and record.offering_id == attempt.offering_id)
+            or (attempt.offering_name and record.offering_name == attempt.offering_name)
+        ):
+            raise ACPAdapterError("ACP response lacks the offering identity needed for finalization")
+        if not attempt.requirements_signature or record.requirements_signature != attempt.requirements_signature:
+            raise ACPAdapterError("ACP requirements identity is missing or conflicting")
+        if record.transaction_hashes and not any(
+            transaction.lower() == settlement.transaction_hash.lower()
+            for transaction in record.transaction_hashes
+        ):
+            raise ACPAdapterError("settlement transaction conflicts with ACP transaction identity")
+
+        timestamp = now or datetime.now(timezone.utc)
+        result = WorkResult(
+            scope=plan.scope,
+            workflow_id=plan.workflow_id,
+            step_id=step_id,
+            implementation_id=implementation_id,
+            input_signature=input_signature,
+            output_signature=output_signature(record.deliverable),
+            output=record.deliverable,
+            completed_at=timestamp,
+            fresh_until=fresh_until,
+            successful_attempt_id=attempt_id,
+            artifact=artifact,
+        )
+        self.store.save_artifact_reference(plan.workflow_id, step_id, artifact)
+        self.store.save_work_result(result)
+        self.store.save_attempt(
+            replace(
+                attempt,
+                status="succeeded",
+                provider_id=record.provider_id,
+                offering_id=attempt.offering_id or record.offering_id,
+                offering_name=attempt.offering_name or record.offering_name,
+            )
+        )
+        self.store.set_active_attempt(step_id, None)
+        self.store.append_event(
+            ExecutionEvent(
+                f"event-{attempt_id}-work-finalized",
+                plan.scope,
+                attempt_id,
+                "ACP_WORK_FINALIZED",
+                "succeeded",
+                f"ACP completed job {record.job_id} with independently verified deliverable and settlement; reusable work persisted.",
+                timestamp,
+            )
+        )
+        return result
 
     def parse_response(self, response: ACPCommandResult) -> ACPJobRecord:
         if response.status != ACPCommandStatus.SUCCEEDED or not isinstance(response.data, Mapping):
@@ -684,15 +1147,30 @@ class ACPAdapter:
             self._reject_duplicate_active_attempt(step_id, input_signature)
             self._authorize(approval, plan, step_id, provider_id, offering_id, chain_id, "create_job", amount, now)
             self.ledger.reserve(approval, plan, step_id=step_id, provider_id=provider_id, offering_id=offering_id, chain_id=chain_id, action="create_job", amount=amount, currency=approval.currency, reservation_id=attempt_id, now=now)
-            self._persist_intent(plan, step_id, input_signature, attempt_id, "submitting", now=now)
+            self._persist_intent(
+                plan,
+                step_id,
+                input_signature,
+                attempt_id,
+                "submitting",
+                provider_id=provider_id,
+                offering_id=offering_id,
+                offering_name=offering_name,
+                requirements_signature=_requirements_signature(requirements),
+                chain_id=chain_id,
+                now=now,
+            )
         response = self.runner.run_json(args, side_effecting=True)
         if response.status == ACPCommandStatus.SUCCEEDED:
             try:
-                record = self.parse_response(response)
+                if isinstance(response.data, Mapping) and ("chainId" in response.data or "chain_id" in response.data):
+                    record = self.parse_response(response)
+                else:
+                    record = parse_create_job_response(response.data, chain_id=chain_id)
             except ACPAdapterError:
                 self._mark_attempt(plan, step_id, attempt_id, "ambiguous", now=now)
                 return replace(response, status=ACPCommandStatus.AMBIGUOUS, external_outcome_ambiguous=True)
-            if not self._create_response_matches_request(record, provider_id, offering_id, chain_id):
+            if not self._create_response_matches_request(record, provider_id, offering_id, offering_name, chain_id):
                 self._mark_attempt(plan, step_id, attempt_id, "ambiguous", now=now)
                 return replace(response, status=ACPCommandStatus.AMBIGUOUS, external_outcome_ambiguous=True, error="ACP create response identity did not match the requested scope")
             self._mark_attempt(plan, step_id, attempt_id, "active", provider_job_id=record.job_id, provider_chain_id=record.chain_id, now=now)
@@ -718,7 +1196,7 @@ class ACPAdapter:
         now=None,
     ) -> ACPCommandResult:
         return self._paid_action(
-            plan, approval, step_id=step_id, input_signature=input_signature, provider_id=provider_id, offering_id=offering_id, chain_id=chain_id, action="fund", amount=amount, attempt_id=attempt_id, args=["acp", "client", "fund", "--job-id", job_id, "--amount", amount], now=now,
+            plan, approval, step_id=step_id, input_signature=input_signature, provider_id=provider_id, offering_id=offering_id, chain_id=chain_id, action="fund", amount=amount, attempt_id=attempt_id, args=["acp", "client", "fund", "--job-id", job_id, "--amount", amount, "--chain-id", str(chain_id)], now=now,
         )
 
     def complete_job(
@@ -738,7 +1216,7 @@ class ACPAdapter:
         now=None,
     ) -> ACPCommandResult:
         return self._paid_action(
-            plan, approval, step_id=step_id, input_signature=input_signature, provider_id=provider_id, offering_id=offering_id, chain_id=chain_id, action="complete", amount=amount, attempt_id=attempt_id, args=["acp", "client", "complete", "--job-id", job_id, "--reason", reason], now=now,
+            plan, approval, step_id=step_id, input_signature=input_signature, provider_id=provider_id, offering_id=offering_id, chain_id=chain_id, action="complete", amount=amount, attempt_id=attempt_id, args=["acp", "client", "complete", "--job-id", job_id, "--chain-id", str(chain_id), "--reason", reason], now=now,
         )
 
     def reject_job(
@@ -757,7 +1235,7 @@ class ACPAdapter:
         now=None,
     ) -> ACPCommandResult:
         return self._paid_action(
-            plan, approval, step_id=step_id, input_signature=input_signature, provider_id=provider_id, offering_id=offering_id, chain_id=chain_id, action="reject", amount="0", attempt_id=attempt_id, args=["acp", "client", "reject", "--job-id", job_id, "--reason", reason], now=now,
+            plan, approval, step_id=step_id, input_signature=input_signature, provider_id=provider_id, offering_id=offering_id, chain_id=chain_id, action="reject", amount="0", attempt_id=attempt_id, args=["acp", "client", "reject", "--job-id", job_id, "--chain-id", str(chain_id), "--reason", reason], now=now,
         )
 
     def _paid_action(self, plan, approval, *, step_id, input_signature, provider_id, offering_id, chain_id, action, amount, attempt_id, args, now):
@@ -769,7 +1247,17 @@ class ACPAdapter:
             )
             self._authorize(approval, plan, step_id, provider_id, offering_id, chain_id, action, amount, now)
             self.ledger.reserve(approval, plan, step_id=step_id, provider_id=provider_id, offering_id=offering_id, chain_id=chain_id, action=action, amount=amount, currency=approval.currency, reservation_id=f"{attempt_id}:{action}", now=now)
-            self._persist_intent(plan, step_id, input_signature, attempt_id, "submitting", now=now)
+            self._persist_intent(
+                plan,
+                step_id,
+                input_signature,
+                attempt_id,
+                "submitting",
+                provider_id=provider_id,
+                offering_id=offering_id,
+                chain_id=chain_id,
+                now=now,
+            )
         response = self.runner.run_json(args, side_effecting=True)
         if response.status == ACPCommandStatus.FAILED:
             status = "failed"
@@ -796,11 +1284,12 @@ class ACPAdapter:
         )
 
     @staticmethod
-    def _create_response_matches_request(record: ACPJobRecord, provider_id: str, offering_id: str, chain_id: int) -> bool:
+    def _create_response_matches_request(record: ACPJobRecord, provider_id: str, offering_id: str, offering_name: str, chain_id: int) -> bool:
         return (
             record.chain_id == chain_id
-            and (record.provider_id is None or record.provider_id == provider_id)
+            and (record.provider_id is None or _same_identity(record.provider_id, provider_id))
             and (record.offering_id is None or record.offering_id == offering_id)
+            and (record.offering_name is None or record.offering_name == offering_name)
         )
 
     def _reject_duplicate_active_attempt(self, step_id: str, input_signature: str, statuses=None) -> None:
@@ -812,8 +1301,20 @@ class ACPAdapter:
         if active is not None and active.input_signature == input_signature and active.status in active_statuses:
             raise ACPAdapterError("an active or ambiguous ACP attempt already owns this input signature")
 
-    def _persist_intent(self, plan, step_id, input_signature, attempt_id, status, *, now=None):
-        attempt = ExecutionAttempt(attempt_id, plan.scope, plan.workflow_id, step_id, status, input_signature)
+    def _persist_intent(self, plan, step_id, input_signature, attempt_id, status, *, provider_id=None, offering_id=None, offering_name=None, requirements_signature=None, chain_id=None, now=None):
+        attempt = ExecutionAttempt(
+            attempt_id,
+            plan.scope,
+            plan.workflow_id,
+            step_id,
+            status,
+            input_signature,
+            provider_chain_id=chain_id,
+            provider_id=provider_id,
+            offering_id=offering_id,
+            offering_name=offering_name,
+            requirements_signature=requirements_signature,
+        )
         self.store.save_attempt(attempt)
         self.store.set_active_attempt(step_id, attempt_id)
         self.store.append_event(ExecutionEvent(f"event-{attempt_id}", plan.scope, attempt_id, "ACP_INTENT_PERSISTED", status, "ACP action intent persisted before command execution.", now or datetime.now(timezone.utc)))
@@ -822,17 +1323,42 @@ class ACPAdapter:
         existing = self.store.get_attempt(attempt_id)
         if existing is None:
             raise ACPAdapterError("attempt intent was not found")
-        updated = ExecutionAttempt(attempt_id, plan.scope, plan.workflow_id, step_id, status, existing.input_signature, provider_job_id or existing.provider_job_id, provider_chain_id or existing.provider_chain_id)
+        updated = ExecutionAttempt(
+            attempt_id,
+            plan.scope,
+            plan.workflow_id,
+            step_id,
+            status,
+            existing.input_signature,
+            provider_job_id or existing.provider_job_id,
+            provider_chain_id or existing.provider_chain_id,
+            existing.error_code,
+            existing.provider_id,
+            existing.offering_id,
+            existing.offering_name,
+            existing.requirements_signature,
+        )
         self.store.save_attempt(updated)
         self.store.set_active_attempt(step_id, None if status in {"failed", "succeeded", "rejected", "expired"} else attempt_id)
         self.store.append_event(ExecutionEvent(f"event-{attempt_id}-{status}", plan.scope, attempt_id, f"ACP_{status.upper()}", status, "ACP command outcome recorded without asserting settlement evidence.", now or datetime.now(timezone.utc)))
 
-    def _persist_reconciliation(self, attempt: ExecutionAttempt, status: str, record: ACPJobRecord, *, now: datetime) -> None:
+    def _persist_reconciliation(
+        self,
+        attempt: ExecutionAttempt,
+        status: str,
+        record: ACPJobRecord,
+        *,
+        now: datetime,
+        source: str = ACPObservationSource.LIVE.value,
+    ) -> None:
         updated = replace(
             attempt,
             status=status,
             provider_job_id=record.job_id,
             provider_chain_id=record.chain_id,
+            provider_id=attempt.provider_id or record.provider_id,
+            offering_name=attempt.offering_name or record.offering_name,
+            requirements_signature=attempt.requirements_signature or record.requirements_signature,
         )
         self.store.save_attempt(updated)
         self.store.set_active_attempt(attempt.step_id, None if status in {"succeeded", "rejected", "expired"} else attempt.attempt_id)
@@ -843,7 +1369,7 @@ class ACPAdapter:
                 attempt.attempt_id,
                 "ACP_RECONCILED",
                 status,
-                "ACP provider state was reconciled from a persisted attempt without asserting settlement evidence.",
+                f"ACP {source} observation recorded for job {record.job_id} at lifecycle {record.provider_status}; no settlement or artifact reuse was asserted.",
                 now,
             )
         )

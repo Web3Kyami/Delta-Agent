@@ -214,10 +214,22 @@ Observed during the Phase 7 no-spend preflight refresh on 2026-09-02:
 - Ordinary browse and `--chain-ids 8453` browse each returned 5 agents for image generation, 5 for announcement and marketing copywriting, and 5 for translation. The corresponding offering counts were 46, 33, and 67. No job or transaction command was run.
 - The live browse envelope and offering fields matched the adapter fixture contract. Current records expose provider and offering identity, chain records, requirements, deliverable, `slaMinutes`, `priceType`, `priceValue`, `requiredFunds`, and `isHidden`. They do not expose a separate online heartbeat, job identity, transaction identity, or lifecycle state.
 
+Observed during the approved live ACP validation attempt on 2026-09-03:
+
+- The read-only preflight returned signer policy `ACP_ONLY`, Base USDC balance `0.0905`, and Aaga `content_generation` at a fixed `0.01 USDC` with a five-minute SLA.
+- `acp client create-job` returned the compact v2 receipt shape `{success, action, protocol, jobId, provider, offering}`. The command created job `75773` on Base `8453` through Delta's argument-array adapter path.
+- The installed package source calls `sendMessage(..., JSON.stringify(requirementData), "requirement", ...)` after job creation. Aaga's real history showed that this message omitted the outer offering name and returned `Malformed requirement for content_generation`.
+- The official message command accepts a runtime `requirement` content type even though its help text lists only `text`, `proposal`, `deliverable`, and `structured`. Resending the exact envelope through `text`, `structured`, and `requirement` did not cause Aaga to set a budget during the bounded observation window.
+- `acp job history --job-id 75773 --chain-id 8453 --json` returned `{jobId, chainId, protocol, status, entryCount, entries}` with six entries and status `open`. No budget, funding, deliverable, or transaction hash was exposed. `acp job watch --job-id 75773 --chain-id 8453 --json` failed with `unknown option '--chain-id'`, so chain-scoped history is the safe recovery path for this installed CLI.
+- No funding, completion, settlement, or artifact acceptance was performed for job `75773`. The attempt is persisted in Sibyl as an active known job and remains blocked rather than treated as success.
+- The latest full suite after adding the requirement-envelope, reusable-work finalization boundary, and HTTPS-only artifact redirect tests passed with `72 passed, 15 subtests passed` in `14.42s`.
+- The live helper's negative funding guard was exercised against job `75773`; with history status `open`, it stopped before the funding transport.
+
 Observed during Phase 4 adapter verification on 2026-09-02:
 
 - `delta.providers.acp` uses argument-array subprocess execution with `shell=False`, appends `--json`, redacts credential-shaped output, and records command failure, parse failure, timeout, and ambiguous side-effect outcomes separately.
-- The adapter uses the documented `acp browse`, `acp job history`, `acp job watch`, `acp client create-job`, `acp client fund`, `acp client complete`, and `acp client reject` command shapes. Live verification in this task covered browse only. No job or transaction command was run.
+- The adapter uses the documented `acp browse`, `acp job history`, `acp job watch`, `acp client create-job`, `acp client fund`, `acp client complete`, and `acp client reject` command shapes. Read-only live verification now covers browse and `acp job history`; no new job, funding, settlement, or transaction command was run during this verification.
+- The live validation wrapper adds an explicit requirement-envelope correction path and refuses funding unless chain-scoped history reports `budget_set` with a valid amount matching the requested amount. It refuses completion unless history reports `submitted` with both a deliverable and provider hash.
 - ACP action intent and cumulative service-spend reservations are written through the real Sibyl store before the adapter invokes a side-effecting transport call.
 - Sanitized lifecycle fixtures cover open, budget-set, funded, submitted, completed, rejected, and expired states. They are explicitly marked as fixtures and are not provider or settlement evidence.
 - Phase 4 artifact tests cover generated local identifiers, root confinement, missing files, HTTPS-only remote references, timeout and transport errors, size limits, and content-hash mismatch before availability.
@@ -383,6 +395,53 @@ Notable API surface (from Phase 7 live run, recorded against `@virtuals-protocol
   standard Ethereum JSON-RPC and was used to verify every transaction in Phase 7.
 - The Delta agent wallet (Privy-hosted, ACP-signer-only — no raw key on this machine) is
   `0x702Ab9EcFB9F87F52e79157b2EA6A929B60eC576`. See `SECURITY.md` for the spend rules.
+
+### Current live read-only verification (2026-09-03)
+
+- The official package `@virtuals-protocol/acp-cli@1.0.34` was invoked through `npx` with `TS_KEYRING_BACKEND=file` and the authenticated Delta identity. `acp agent whoami --json` returned the active Delta agent and `acp agent signer-policy --json` returned `ACP_ONLY`.
+- `acp job history --job-id 75656 --chain-id 8453 --json` returned `status: completed`, `entryCount: 8`, chain `8453`, provider `0xB0aCA700745a989A1CB859eeCfE0fD9Afbc066AA`, the `content_generation` requirement messages, the provider deliverable string, and the provider-attested hash `0x5c970be48a64875341e4596c4f6d3b8c34c2df2680d9f0a2d6a6cc96c2ec29f8`.
+- The live history response was parsed by `ACPAdapter.parse_response` and passed to `ACPAdapter.record_observation(..., source=ACPObservationSource.LIVE)` in a disposable real Sibyl scope. The persisted attempt was `reconciliation_required`, the journal event was marked live, and no WorkResult was created.
+- The adapter transport now supports a configured argument-array prefix for the official `npx` package command. With `TS_KEYRING_BACKEND=file`, `ACPAdapter.job_history("75656", chain_id=8453)` fetched the live response itself, parsed it, and persisted the observation in the disposable scope. History and watch calls can carry the known chain ID required by the installed CLI.
+- The installed official ACP EVM client implementation hashes a submitted deliverable as `keccak256(toHex(params.deliverable))`. Applying that rule to the exact UTF-8 provider deliverable string produced `0x5c970be48a64875341e4596c4f6d3b8c34c2df2680d9f0a2d6a6cc96c2ec29f8`, matching the provider and onchain attestation. The generic local SHA-256 digest is intentionally recorded separately and is not comparable to the ACP protocol hash.
+- This verifies live provider history, adapter observation capture, and deliverable integrity. It does not verify a live Delta-created job, settlement ingestion, reusable WorkResult persistence, or a fresh-process reuse decision for this paid output.
+- A current Base-filtered refresh through the adapter returned `5 agents / 46 offerings` for `image generation` with `--top-k 5`, `5 / 35` for `content writing` with `--top-k 5`, `6 / 49` for `translation` with `--top-k 20`, and `20 / 167` for `translate text` with `--top-k 20`. The translation result sets did not contain a dedicated translation offering. These counts are dated live observations and must be refreshed before any paid action.
+- The strongest current visual candidate is Syeollanga-claw `ai_image_generation` at `0.05` USDC fixed on Base, followed by Artelier `super_image_gen` at `0.5` USDC. The strongest current announcement candidate is Aaga `content_generation` at `0.01` USDC fixed on Base. GSB Thread Writer `write_thread` is a current 0.1 USDC Base alternative. No translation provider is locked.
+
+### Phase 7 audit correction
+
+The recorded Aaga job and its Base receipts are external evidence, not proof of a
+live Delta adapter round trip. The compact create response contained `jobId`,
+`provider`, and `offering`, but no status or chain ID. The history response contained
+`jobId`, `chainId`, `status`, and nested `entries`; provider identity, offering name,
+deliverable, and deliverable hash had to be read from those entries. The adapter now
+normalizes those observed shapes and carries the requested chain on the compact create
+receipt without treating it as an independent provider assertion.
+
+The recorded settlement transfers were 0.009 USDC to the provider, 0.0005 USDC to
+Delta, and 0.0005 USDC to another recipient. Delta's service outflow was therefore
+0.0095 USDC before gas. The earlier 0.001 USDC Delta refund and net-cost claims were
+incorrect and have been removed from the owning status documents.
+
+The provider-attested hash from the ACP `Submitted` event matches the exact provider
+deliverable string under the official ACP EVM Keccak rule. The generic local SHA-256
+digest differs because it uses a different algorithm. `ACPAdapter.record_observation`
+now persists the live response through the normal attempt and journal paths without
+creating a `WorkResult`. The recorded-data Phase 7 scripts and tests still verify only
+the fixture boundary, while the current disposable check verifies live adapter
+observation capture. Neither path establishes a live Delta-created paid job or
+reusable WorkResult.
+
+The adapter also persists a requirements signature with an ACP attempt and derives
+one from valid requirement entries in history when the provider response exposes them.
+The live history shape did not expose an offering ID, so conservative matching may
+use a matching offering name only when the known job, provider, chain, and other
+available evidence agree. Missing identity remains manual rather than an automatic
+attachment.
+
+`ACPAdapter.finalize_completed_work` is now the only adapter boundary that can
+persist a reusable ACP `WorkResult`. It requires matching persisted identity,
+verified deliverable-hash evidence, a successful settlement receipt, and an
+`AVAILABLE` artifact resolution, and rejects recorded fixtures.
 
 The final demo and any code in the repository must use the same pinned versions listed above or
 explicitly explain the difference.

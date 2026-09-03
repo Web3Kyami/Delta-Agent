@@ -1,0 +1,49 @@
+{
+  "fixture": true,
+  "source": "recorded_live_response_shape",
+  "jobId": "recorded-job-75656",
+  "chainId": 8453,
+  "protocol": "v2",
+  "status": "submitted",
+  "entryCount": 4,
+  "entries": [
+    {
+      "kind": "system",
+      "onChainJobId": "recorded-job-75656",
+      "chainId": 8453,
+      "event": {
+        "type": "job.created",
+        "provider": "0xb0aca700745a989a1cb859eecfe0fd9afbc066aa"
+      },
+      "timestamp": 1788388662020
+    },
+    {
+      "kind": "message",
+      "onChainJobId": "recorded-job-75656",
+      "chainId": 8453,
+      "contentType": "text",
+      "content": "Malformed requirement for content_generation",
+      "timestamp": 1788388665086
+    },
+    {
+      "kind": "message",
+      "onChainJobId": "recorded-job-75656",
+      "chainId": 8453,
+      "contentType": "requirement",
+      "content": "{\"name\":\"content_generation\",\"requirement\":{\"topic\":\"AI agents in DeFi\",\"content_type\":\"blog_post\",\"tone\":\"technical\",\"audience\":\"developers\",\"word_count\":350}}",
+      "timestamp": 1788388815282
+    },
+    {
+      "kind": "system",
+      "onChainJobId": "recorded-job-75656",
+      "chainId": 8453,
+      "event": {
+        "type": "job.submitted",
+        "provider": "0xb0aca700745a989a1cb859eecfe0fd9afbc066aa",
+        "deliverableHash": "0x5c970be48a64875341e4596c4f6d3b8c34c2df2680d9f0a2d6a6cc96c2ec29f8",
+        "deliverable": "{\"type\":\"json\",\"value\":{\"content\":{\"word_count\":159}}}"
+      },
+      "timestamp": 1788388895783
+    }
+  ]
+}

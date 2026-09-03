@@ -15,7 +15,7 @@ The current workspace contains the planning package only. Build the reusable eng
 3. **Phase 2, persistence:** connect Sibyl as the authoritative store, keep artifacts outside Sibyl, and prove fresh-process recovery.
 4. **Phase 3, revision behavior:** implement preview decisions, runtime downstream reevaluation, structured reasons, and the full deterministic scenario suite.
 5. **Phase 4, paid-job safety:** add the narrow ACP adapter and fixture-based lifecycle reconciliation before any live transaction.
-6. **Phase 5, demonstration UI:** expose the workflow inputs, decisions, costs, outputs, approvals, provider states, and recovery states in one responsive page.
+6. **Phase 5, product workspace:** expose workflow inputs, decisions, costs, outputs, approvals, provider states, and recovery states in a responsive operations interface.
 7. **Phase 6, baseline:** build a fair LangGraph comparison and record measured overlap and added Delta behavior.
 8. **Phase 7, live validation:** exercise one approved ACP service job and Base payment or settlement, then prove restart recovery from Sibyl.
 9. **Phase 8, submission hardening:** run the complete verification path, remove secrets, pin versions, update the public documentation, and capture honest evidence.
@@ -379,7 +379,7 @@ Unknown job ID after ambiguous create:
 
 Phase 4 passes when clearly labelled fixture tests exercise the adapter contract and prove approval scope and cap enforcement, single-writer attempt creation, hostile-output handling, safe artifact resolution, conservative candidate matching, and money-sensitive reconciliation behavior. The evidence must include a positive lifecycle, a changed or conflicting provider response, and fresh-process recovery of persisted job identity. Each success and failure must be derived from the fixture response through the adapter path, and no fixture may be presented as live ACP evidence. No live transaction may have been sent. Live marketplace response verification remains a separate readiness record and must not be replaced by fixtures.
 
-## Phase 5: Minimal demonstration interface
+## Phase 5: Branded demonstration workspace
 
 ### Goal
 
@@ -387,7 +387,7 @@ Expose the deterministic engine and reconciliation states clearly before live pa
 
 ### Work
 
-Create one page using the repository's existing web stack or the minimal FastAPI/server-rendered approach from `MASTER_PLAN.md`.
+Create a focused product workspace using the repository's existing web stack or the server-rendered approach from `MASTER_PLAN.md`. Provide a public product entry point and real application routes for distinct operational tasks. Navigation must change the current page rather than scrolling through one long dashboard.
 
 Keep revision logic in the engine. Validate project scope and action prerequisites on the server for every read and state-changing request. Render user and provider content as escaped text. If the interface is exposed beyond localhost, add CSRF protection appropriate to the selected stack.
 
@@ -542,6 +542,17 @@ Do not start this phase without explicit approval.
 
 Read-only Phase 7 preflight is allowed before that approval. It may refresh the authenticated identity, signer policy, marketplace offerings, and response shapes, but it must stop before job creation, funding, settlement, or any other broadcast action.
 
+A no-spend observation may parse and persist a live ACP response through the
+adapter's attempt and journal boundary. That observation is not a completed
+work result, does not make an artifact reusable, and does not satisfy the live
+Phase 7 exit gate until Delta's real job, artifact, persistence, and Base paths
+have been exercised end to end.
+
+Read-only ACP history and protocol-level deliverable hash verification may
+strengthen the evidence record, but they do not replace a live Delta execution,
+settlement ingestion, artifact persistence, or fresh-process reusable-work
+check.
+
 ### Work
 
 1. Re-run read-only offering discovery immediately before spending.
@@ -563,6 +574,18 @@ Read-only Phase 7 preflight is allowed before that approval. It may refresh the 
 17. Persist actual known service cost and gas evidence separately.
 18. Restart the Delta process and prove the completed work and job history restore from Sibyl.
 19. Run a revision that reuses at least one paid result and reruns at least one affected step when budget permits.
+
+If job creation succeeds but the provider rejects the requirement envelope or
+does not expose a budget, persist the known job identity and leave the attempt
+active or blocked. Do not fund an `open` job, infer a budget from the browse
+price, create a replacement, or mark the live path verified.
+
+The adapter's reusable-work boundary is explicit. A completed ACP status cannot
+create a `WorkResult` by itself. Finalization requires matching persisted job
+identity and requirements, an independently verified provider deliverable hash,
+a successful settlement receipt on the job chain, and an `AVAILABLE`
+`ArtifactResolution` from the bounded artifact store. Recorded fixtures cannot
+cross this boundary.
 
 ### Interrupted-job demonstration
 
@@ -614,7 +637,7 @@ Make the repository reproducible, honest, and judge-ready.
 
 ### Exit gate
 
-The project is submission-ready only when every minimum-complete-submission item in `MASTER_PLAN.md` is either verified with end-to-end evidence or explicitly blocked with the user aware that the submission is incomplete. No fixture, mocked response, placeholder, or predetermined result may be presented as live evidence.
+The project is submission-ready only when every minimum-complete-submission item in `MASTER_PLAN.md` is either verified with end-to-end evidence or explicitly blocked with the user aware that the submission is incomplete. No fixture, mocked response, placeholder, or predetermined result may be presented as live evidence. A passing test that seeds recorded values, a local restart check against a pre-populated database, or an ignored evidence directory does not satisfy the live integration gate. Evidence referenced by README must be sanitized and tracked, or reproducible from documented public inputs.
 
 ## Global acceptance criteria
 

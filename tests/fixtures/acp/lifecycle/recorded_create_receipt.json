@@ -1,0 +1,10 @@
+{
+  "fixture": true,
+  "source": "recorded_live_response_shape",
+  "success": true,
+  "action": "create-job-from-offering",
+  "protocol": "v2",
+  "jobId": "recorded-job-75656",
+  "provider": "0xb0aca700745a989a1cb859eecfe0fd9afbc066aa",
+  "offering": "content_generation"
+}

@@ -484,6 +484,10 @@ class ExecutionAttempt:
     provider_job_id: str | None = None
     provider_chain_id: int | None = None
     error_code: str | None = None
+    provider_id: str | None = None
+    offering_id: str | None = None
+    offering_name: str | None = None
+    requirements_signature: str | None = None
 
     def __post_init__(self) -> None:
         _identifier(self.attempt_id, "attempt_id")
@@ -495,6 +499,14 @@ class ExecutionAttempt:
             not isinstance(self.provider_chain_id, int) or isinstance(self.provider_chain_id, bool) or self.provider_chain_id <= 0
         ):
             raise DeltaValidationError("provider_chain_id must be a positive integer")
+        for value, label in (
+            (self.provider_id, "provider_id"),
+            (self.offering_id, "offering_id"),
+            (self.offering_name, "offering_name"),
+            (self.requirements_signature, "requirements_signature"),
+        ):
+            if value is not None:
+                _identifier(value, label)
 
 
 @dataclass(frozen=True)

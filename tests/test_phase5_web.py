@@ -76,11 +76,22 @@ class PhaseFiveWebTests(unittest.TestCase):
         status, body, headers = self.client.request("/")
         document = body.decode()
         self.assertEqual(status, "200 OK")
-        self.assertIn("<label for=\"description\">", document)
-        self.assertIn("Local fixture mode", document)
-        self.assertIn("aria-live=\"polite\"", document)
-        self.assertIn("/static/styles.css", document)
+        self.assertIn("When the brief changes,", document)
+        self.assertIn('href="/app/revisions"', document)
+        self.assertIn("illustrative preview of Delta's revision model", document)
+        self.assertIn("/static/landing.css", document)
+        self.assertIn("/static/favicon.svg", document)
         self.assertIn("no-store", headers["Cache-Control"])
+        app_status, app_body, _ = self.client.request("/app/revisions")
+        app_document = app_body.decode()
+        self.assertEqual(app_status, "200 OK")
+        self.assertIn("<label for=\"description\">", app_document)
+        self.assertIn("Demo mode", app_document)
+        self.assertIn("aria-live=\"polite\"", app_document)
+        self.assertIn("/static/styles.css", app_document)
+        self.assertIn('id="revision-lab"', app_document)
+        self.assertIn('aria-busy="false"', app_document)
+        self.assertIn('href="/app/runs"', app_document)
         css_status, css_body, _ = self.client.request("/static/styles.css")
         self.assertEqual(css_status, "200 OK")
         self.assertIn("prefers-reduced-motion", css_body.decode())
@@ -89,6 +100,31 @@ class PhaseFiveWebTests(unittest.TestCase):
         self.assertIn("Inputs changed. Preview the current inputs again", js_body.decode())
         self.assertIn("Nothing new needs to run for these inputs", js_body.decode())
         self.assertIn("This page session expired. Refresh the page", js_body.decode())
+        self.assertIn("nav-visible", js_body.decode())
+        logo_status, logo_body, logo_headers = self.client.request("/static/logo.svg")
+        self.assertEqual(logo_status, "200 OK")
+        self.assertIn("image/svg+xml", logo_headers["Content-Type"])
+        self.assertIn("<svg", logo_body.decode())
+
+    def test_application_routes_have_distinct_active_pages(self) -> None:
+        expected = {
+            "/app/overview": "Good morning.",
+            "/app/revisions": "Plan the next run",
+            "/app/runs": "Execution continuity",
+            "/app/continuity": "Pick up where the work stopped",
+            "/app/integrations": "Execution stack",
+        }
+        for path, heading in expected.items():
+            status, body, _ = self.client.request(path)
+            document = body.decode()
+            self.assertEqual(status, "200 OK")
+            self.assertIn(heading, document)
+            self.assertIn('aria-current="page"', document)
+            self.assertNotIn("{{", document)
+
+        status, _, headers = self.client.request("/app")
+        self.assertEqual(status, "302 Found")
+        self.assertEqual(headers["Location"], "/app/overview")
 
     def test_state_changes_require_csrf_and_valid_inputs(self) -> None:
         status, response, _ = self.client.json("/api/preview", "POST", self.payload)

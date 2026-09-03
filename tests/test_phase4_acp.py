@@ -11,14 +11,18 @@ import threading
 import time
 import unittest
 
-from delta.core import InputSpec, RevisionRequest, Scope, SpendApproval, Step, Workflow, build_revision_plan
+from delta.artifacts import ArtifactResolution, ArtifactResolutionStatus
+from delta.core import ArtifactReference, ExecutionAttempt, InputSpec, RevisionRequest, Scope, SpendApproval, Step, Workflow, build_revision_plan
 from delta.providers.acp import (
     ACPAdapter,
     ACPAdapterError,
     ACPCommandResult,
     ACPCommandRunner,
     ACPCommandStatus,
+    ACPDeliverableVerification,
+    ACPObservationSource,
     ACPParseError,
+    ACPSettlementEvidence,
     ACPSpendLedger,
     ChainEvidence,
     FundingOutcome,
@@ -28,6 +32,7 @@ from delta.providers.acp import (
     match_reconciliation_candidates,
     parse_browse_response,
     parse_chain_evidence,
+    parse_create_job_response,
     parse_job_record,
     reconcile_funding,
     redact_text,
@@ -110,6 +115,14 @@ class PhaseFourACPTests(unittest.TestCase):
         self.assertNotIn(secret, result.stdout)
         self.assertNotIn(secret, result.args[2])
 
+    def test_runner_can_replace_acp_executable_with_pinned_argument_prefix(self) -> None:
+        script = "import json, sys; print(json.dumps({'argv': sys.argv[1:]}))"
+        runner = ACPCommandRunner(command_prefix=(sys.executable, "-c", script))
+        result = runner.run_json(["acp", "browse", "image generation"])
+        self.assertEqual(result.status, ACPCommandStatus.SUCCEEDED)
+        self.assertEqual(result.data["argv"], ["browse", "image generation", "--json"])
+        self.assertEqual(result.args[:3], (sys.executable, "-c", script))
+
     def test_runner_distinguishes_nonzero_parse_failure_and_side_effect_timeout(self) -> None:
         failed = ACPCommandRunner().run_json([sys.executable, "-c", "raise SystemExit(3)"])
         self.assertEqual(failed.status, ACPCommandStatus.FAILED)
@@ -123,13 +136,47 @@ class PhaseFourACPTests(unittest.TestCase):
         self.assertEqual(timed_out.status, ACPCommandStatus.TIMEOUT)
         self.assertTrue(timed_out.external_outcome_ambiguous)
 
+    def test_history_and_watch_can_include_the_required_chain_id(self) -> None:
+        runner = FixtureRunner([fixture_response("submitted"), fixture_response("submitted")])
+        adapter = ACPAdapter(self.store, runner)
+        adapter.job_history("fixture-job-42", chain_id=8453)
+        adapter.watch_job("fixture-job-42", chain_id=8453)
+        self.assertEqual(
+            runner.calls[0][0],
+            ("acp", "job", "history", "--job-id", "fixture-job-42", "--chain-id", "8453"),
+        )
+        self.assertEqual(
+            runner.calls[1][0],
+            ("acp", "job", "watch", "--job-id", "fixture-job-42", "--chain-id", "8453"),
+        )
+
+    def test_requirement_correction_uses_the_provider_envelope(self) -> None:
+        runner = FixtureRunner([ACPCommandResult(ACPCommandStatus.SUCCEEDED, ("fixture",), data={"success": True})])
+        adapter = ACPAdapter(self.store, runner)
+        adapter.send_requirement(
+            "fixture-job-42",
+            chain_id=8453,
+            offering_name="content_generation",
+            requirements={"topic": "fixture", "content_type": "blog_post"},
+        )
+        args = runner.calls[0][0]
+        self.assertEqual(
+            args[:9],
+            ("acp", "message", "send", "--job-id", "fixture-job-42", "--chain-id", "8453", "--content-type", "requirement"),
+        )
+        self.assertEqual(
+            json.loads(args[10]),
+            {"name": "content_generation", "requirement": {"content_type": "blog_post", "topic": "fixture"}},
+        )
+        self.assertTrue(runner.calls[0][1]["side_effecting"])
+
     def test_lifecycle_fixtures_map_through_adapter_and_completed_is_not_settlement_evidence(self) -> None:
         expected = {
             "open": "awaiting_provider",
             "budget_set": "awaiting_approval",
             "funded": "awaiting_provider",
             "submitted": "deliverable_ready",
-            "completed": "succeeded",
+            "completed": "reconciliation_required",
             "rejected": "rejected",
             "expired": "expired",
         }
@@ -197,6 +244,56 @@ class PhaseFourACPTests(unittest.TestCase):
         with self.assertRaises(ACPParseError):
             parse_browse_response({"data": [{"id": "provider", "name": "Provider", "chains": [], "offerings": [{"id": "offering", "name": "image", "priceValue": "not-a-price"}]}]})
 
+    def test_recorded_live_create_and_history_shapes_are_normalized(self) -> None:
+        create_payload = json.loads((FIXTURES / "recorded_create_receipt.json").read_text())
+        created = parse_create_job_response(create_payload, chain_id=8453)
+        self.assertTrue(created.fixture)
+        self.assertEqual(created.job_id, "recorded-job-75656")
+        self.assertEqual(created.provider_id, "0xb0aca700745a989a1cb859eecfe0fd9afbc066aa")
+        self.assertIsNone(created.offering_id)
+        self.assertEqual(created.offering_name, "content_generation")
+        self.assertEqual(created.provider_status, "open")
+
+        history_payload = json.loads((FIXTURES / "recorded_history_submitted.json").read_text())
+        history = parse_job_record(history_payload)
+        self.assertEqual(history.provider_status, "submitted")
+        self.assertEqual(history.delta_state, "deliverable_ready")
+        self.assertEqual(history.provider_id, created.provider_id)
+        self.assertIsNone(history.offering_id)
+        self.assertEqual(history.offering_name, "content_generation")
+        self.assertIsNotNone(history.requirements_signature)
+        self.assertEqual(history.deliverable_hash, "0x5c970be48a64875341e4596c4f6d3b8c34c2df2680d9f0a2d6a6cc96c2ec29f8")
+        self.assertIn('"word_count":159', history.deliverable)
+        self.assertEqual(history.transaction_hashes, ())
+        with self.assertRaises(ACPParseError):
+            parse_create_job_response({"success": False, "jobId": "recorded-job-75656"}, chain_id=8453)
+
+    def test_compact_create_receipt_persists_job_identity(self) -> None:
+        compact = json.loads((FIXTURES / "recorded_create_receipt.json").read_text())
+        compact.update({"provider": "fixture-provider", "offering": "Fixture Visual"})
+        runner = FixtureRunner([ACPCommandResult(ACPCommandStatus.SUCCEEDED, ("fixture",), data=compact)])
+        adapter = ACPAdapter(self.store, runner)
+        result = adapter.create_job(
+            self.plan,
+            self.approval,
+            step_id="visual",
+            input_signature="input:compact-create",
+            provider_id="fixture-provider",
+            offering_id="fixture-offering",
+            offering_name="Fixture Visual",
+            requirements={"description": "fixture product"},
+            chain_id=8453,
+            amount="0.25",
+            attempt_id="attempt-compact-create",
+            now=NOW,
+        )
+        self.assertEqual(result.status, ACPCommandStatus.SUCCEEDED)
+        attempt = self.store.get_attempt("attempt-compact-create")
+        self.assertEqual(attempt.status, "active")
+        self.assertEqual(attempt.provider_job_id, "recorded-job-75656")
+        self.assertEqual(attempt.provider_chain_id, 8453)
+        self.assertIsNotNone(attempt.requirements_signature)
+
     def test_watch_and_known_job_reconciliation_use_provider_response(self) -> None:
         runner = FixtureRunner([
             fixture_response("submitted"),
@@ -240,6 +337,9 @@ class PhaseFourACPTests(unittest.TestCase):
         attempt = self.store.get_attempt("attempt-create")
         self.assertEqual(attempt.status, "active")
         self.assertEqual(attempt.provider_job_id, "fixture-job-42")
+        self.assertEqual(attempt.provider_id, "fixture-provider")
+        self.assertEqual(attempt.offering_id, "fixture-offering")
+        self.assertEqual(attempt.offering_name, "Fixture Visual")
         self.assertNotEqual(attempt.status, "succeeded")
 
     def test_ambiguous_create_is_persisted_and_not_retried_implicitly(self) -> None:
@@ -301,7 +401,7 @@ import json
 import sys
 from pathlib import Path
 from delta.core import Scope
-from delta.providers.acp import ACPAdapter, ACPCommandResult, ACPCommandStatus
+from delta.providers.acp import ACPAdapter, ACPCommandResult, ACPCommandStatus, ACPObservationSource
 from delta.store import SibylStore
 
 class Runner:
@@ -314,7 +414,7 @@ class Runner:
 
 scope = Scope(sys.argv[2], sys.argv[3])
 store = SibylStore.local(Path(sys.argv[1]), scope)
-record = ACPAdapter(store, Runner()).reconcile_attempt("visual")
+record = ACPAdapter(store, Runner()).reconcile_attempt("visual", source=ACPObservationSource.RECORDED_FIXTURE)
 attempt = store.get_attempt("attempt-restart")
 print(json.dumps({"job_id": record.job_id, "status": attempt.status, "fixture": record.fixture}))
 """
@@ -334,6 +434,30 @@ print(json.dumps({"job_id": record.job_id, "status": attempt.status, "fixture": 
         )
         recovered = json.loads(result.stdout)
         self.assertEqual(recovered, {"job_id": "fixture-job-42", "status": "active", "fixture": True})
+
+    def test_reconcile_attempt_blocks_provider_identity_conflict(self) -> None:
+        attempt = ExecutionAttempt(
+            "attempt-provider-conflict",
+            self.scope,
+            self.plan.workflow_id,
+            "visual",
+            "ambiguous",
+            "input:provider-conflict",
+            provider_job_id="fixture-job-42",
+            provider_chain_id=8453,
+            provider_id="fixture-provider",
+            offering_id="fixture-offering",
+            offering_name="Fixture Visual",
+        )
+        self.store.save_attempt(attempt)
+        self.store.set_active_attempt("visual", attempt.attempt_id)
+        response = fixture_response("open")
+        response.data["providerId"] = "different-provider"
+        adapter = ACPAdapter(self.store, FixtureRunner([response]))
+        with self.assertRaises(ACPAdapterError):
+            adapter.reconcile_attempt("visual", source=ACPObservationSource.RECORDED_FIXTURE)
+        self.assertEqual(self.store.get_attempt(attempt.attempt_id).status, "blocked")
+        self.assertEqual(self.store.get_attempt(attempt.attempt_id).provider_id, "fixture-provider")
 
     def test_concurrent_create_for_same_input_is_called_once(self) -> None:
         first_started = threading.Event()
@@ -390,8 +514,8 @@ print(json.dumps({"job_id": record.job_id, "status": attempt.status, "fixture": 
         )
         self.assertEqual(fund.status, ACPCommandStatus.SUCCEEDED)
         self.assertEqual(complete.status, ACPCommandStatus.SUCCEEDED)
-        self.assertEqual(runner.calls[0][0][-4:], ("--job-id", "fixture-job-42", "--amount", "0.25"))
-        self.assertEqual(runner.calls[1][0][-4:], ("--job-id", "fixture-job-42", "--reason", "Fixture review"))
+        self.assertEqual(runner.calls[0][0][-6:], ("--job-id", "fixture-job-42", "--amount", "0.25", "--chain-id", "8453"))
+        self.assertEqual(runner.calls[1][0][-6:], ("--job-id", "fixture-job-42", "--chain-id", "8453", "--reason", "Fixture review"))
 
         with self.assertRaises(Exception):
             adapter.fund_job(
@@ -461,6 +585,179 @@ print(json.dumps({"job_id": record.job_id, "status": attempt.status, "fixture": 
         self.assertEqual(match_reconciliation_candidates([offering_mismatch], provider_id="provider-a", offering_id="offering-a", chain_id=8453).outcome, ReconciliationOutcome.BLOCKED)
         transaction_mismatch = parse_job_record({**base, "transactionHashes": ["tx-2"]})
         self.assertEqual(match_reconciliation_candidates([transaction_mismatch], provider_id="provider-a", offering_id="offering-a", chain_id=8453, expected_transaction_hashes=("tx-1",)).outcome, ReconciliationOutcome.BLOCKED)
+
+    def test_reconciliation_can_use_known_job_and_offering_name_when_id_is_missing(self) -> None:
+        candidate = parse_job_record({
+            "jobId": "known-job",
+            "providerId": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "chainId": 8453,
+            "status": "submitted",
+            "offeringName": "content_generation",
+        })
+        decision = match_reconciliation_candidates(
+            [candidate],
+            provider_id="0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            offering_id="known-offering-id",
+            offering_name="content_generation",
+            chain_id=8453,
+            expected_job_id="known-job",
+        )
+        self.assertEqual(decision.outcome, ReconciliationOutcome.ATTACH)
+        self.assertEqual(decision.record.job_id, "known-job")
+
+    def test_record_observation_persists_fixture_provenance_without_work_success(self) -> None:
+        attempt = ExecutionAttempt(
+            "attempt-observation",
+            self.scope,
+            self.plan.workflow_id,
+            "visual",
+            "active",
+            "input:observation",
+            provider_job_id="recorded-job-75656",
+            provider_chain_id=8453,
+            provider_id="0xb0aca700745a989a1cb859eecfe0fd9afbc066aa",
+            offering_id="recorded-offering",
+            offering_name="content_generation",
+        )
+        self.store.save_attempt(attempt)
+        self.store.set_active_attempt("visual", attempt.attempt_id)
+        payload = json.loads((FIXTURES / "recorded_history_submitted.json").read_text())
+        adapter = ACPAdapter(self.store, FixtureRunner([]))
+        record = adapter.parse_response(ACPCommandResult(ACPCommandStatus.SUCCEEDED, ("recorded_fixture",), data=payload))
+        adapter.record_observation(attempt.attempt_id, record, source=ACPObservationSource.RECORDED_FIXTURE, now=NOW)
+        stored = self.store.get_attempt(attempt.attempt_id)
+        self.assertEqual(stored.status, "active")
+        self.assertEqual(stored.provider_job_id, "recorded-job-75656")
+        self.assertIsNone(self.store.get_work_result(self.plan.workflow_id, "visual", "input:observation"))
+        event = self.store.read_events(attempt_id=attempt.attempt_id, limit=10)[-1]
+        self.assertIn("recorded_fixture observation", event["detail"])
+
+    def test_live_observation_rejects_fixture_marked_response(self) -> None:
+        attempt = ExecutionAttempt(
+            "attempt-live-fixture",
+            self.scope,
+            self.plan.workflow_id,
+            "visual",
+            "active",
+            "input:live-fixture",
+            provider_job_id="recorded-job-75656",
+            provider_chain_id=8453,
+            provider_id="0xb0aca700745a989a1cb859eecfe0fd9afbc066aa",
+            offering_name="content_generation",
+        )
+        self.store.save_attempt(attempt)
+        self.store.set_active_attempt("visual", attempt.attempt_id)
+        payload = json.loads((FIXTURES / "recorded_history_submitted.json").read_text())
+        record = parse_job_record(payload)
+        with self.assertRaises(ACPAdapterError):
+            ACPAdapter(self.store, FixtureRunner([])).record_observation(attempt.attempt_id, record)
+        self.assertEqual(self.store.get_attempt(attempt.attempt_id).status, "blocked")
+
+    def test_recorded_fixture_cannot_cross_the_reusable_work_boundary(self) -> None:
+        attempt = ExecutionAttempt(
+            "attempt-fixture-finalize",
+            self.scope,
+            self.plan.workflow_id,
+            "visual",
+            "reconciliation_required",
+            "input:fixture-finalize",
+            provider_job_id="fixture-job-42",
+            provider_chain_id=8453,
+            provider_id="fixture-provider",
+            offering_id="fixture-offering",
+            offering_name="Fixture Visual",
+            requirements_signature="requirements:fixture",
+        )
+        self.store.save_attempt(attempt)
+        self.store.set_active_attempt("visual", attempt.attempt_id)
+        record = parse_job_record(
+            {
+                "fixture": True,
+                "jobId": "fixture-job-42",
+                "providerId": "fixture-provider",
+                "offeringId": "fixture-offering",
+                "offeringName": "Fixture Visual",
+                "chainId": 8453,
+                "status": "completed",
+                "requirementsSignature": "requirements:fixture",
+                "deliverable": {"text": "Fixture output"},
+                "deliverableHash": "provider-hash-fixture",
+            }
+        )
+        resolution = ArtifactResolution(
+            ArtifactResolutionStatus.AVAILABLE,
+            ArtifactReference("artifact-fixture", "sha256:fixture", "text/plain", 13, "file:///tmp/artifact-fixture.bin"),
+            "labelled fixture artifact",
+        )
+        adapter = ACPAdapter(self.store, FixtureRunner([]))
+        with self.assertRaises(ACPAdapterError):
+            adapter.finalize_completed_work(
+                self.plan,
+                step_id="visual",
+                implementation_id="visual-v1",
+                input_signature="input:fixture-finalize",
+                attempt_id=attempt.attempt_id,
+                record=record,
+                artifact_resolution=resolution,
+                deliverable_verification=ACPDeliverableVerification(
+                    "provider-keccak256", "provider-hash-fixture", "provider-hash-fixture", True
+                ),
+                settlement=ACPSettlementEvidence(8453, "0xfixture-settlement", "succeeded"),
+                now=NOW,
+            )
+        self.assertIsNone(self.store.get_work_result(self.plan.workflow_id, "visual", "input:fixture-finalize"))
+        self.assertEqual(self.store.get_attempt(attempt.attempt_id).status, "reconciliation_required")
+
+    def test_finalization_rejects_an_unavailable_artifact(self) -> None:
+        attempt = ExecutionAttempt(
+            "attempt-artifact-unavailable",
+            self.scope,
+            self.plan.workflow_id,
+            "visual",
+            "reconciliation_required",
+            "input:artifact-unavailable",
+            provider_job_id="provider-job-1",
+            provider_chain_id=8453,
+            provider_id="provider-a",
+            offering_id="offering-a",
+            offering_name="Fixture Visual",
+            requirements_signature="requirements:provider",
+        )
+        self.store.save_attempt(attempt)
+        self.store.set_active_attempt("visual", attempt.attempt_id)
+        record = parse_job_record(
+            {
+                "jobId": "provider-job-1",
+                "providerId": "provider-a",
+                "offeringName": "Fixture Visual",
+                "chainId": 8453,
+                "status": "completed",
+                "requirementsSignature": "requirements:provider",
+                "deliverable": {"text": "Provider output"},
+                "deliverableHash": "provider-hash",
+            }
+        )
+        adapter = ACPAdapter(self.store, FixtureRunner([]))
+        with self.assertRaises(ACPAdapterError):
+            adapter.finalize_completed_work(
+                self.plan,
+                step_id="visual",
+                implementation_id="visual-v1",
+                input_signature="input:artifact-unavailable",
+                attempt_id=attempt.attempt_id,
+                record=record,
+                artifact_resolution=ArtifactResolution(
+                    ArtifactResolutionStatus.UNAVAILABLE,
+                    None,
+                    "provider artifact is unavailable",
+                ),
+                deliverable_verification=ACPDeliverableVerification(
+                    "provider-keccak256", "provider-hash", "provider-hash", True
+                ),
+                settlement=ACPSettlementEvidence(8453, "0xprovider-settlement", "succeeded"),
+                now=NOW,
+            )
+        self.assertIsNone(self.store.get_work_result(self.plan.workflow_id, "visual", "input:artifact-unavailable"))
 
     def test_funding_requires_agreement_between_provider_and_chain_evidence(self) -> None:
         funded = parse_job_record({"fixture": True, "jobId": "job-funded", "providerId": "provider-a", "offeringId": "offering-a", "chainId": 8453, "status": "funded"})

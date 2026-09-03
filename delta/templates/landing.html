@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Delta decides what agent work still holds after a brief changes, before another paid run begins.">
+  <meta name="theme-color" content="#f2eee5">
+  <title>Delta | Revision control for agent work</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/landing.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Delta home"><img src="/static/logo.svg" width="34" height="34" alt=""><span>delta</span></a>
+    <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+      <a href="#product">Product</a>
+      <a href="#method">Method</a>
+      <a href="#continuity">Continuity</a>
+    </nav>
+    <div class="header-actions">
+      <a class="quiet-link" href="/app/overview">Sign in</a>
+      <a class="button button-ink button-small" href="/app/revisions">Open Delta <span aria-hidden="true">↗</span></a>
+    </div>
+    <button id="marketing-menu" class="menu-button" type="button" aria-label="Open navigation" aria-controls="site-nav" aria-expanded="false"><span></span><span></span></button>
+  </header>
+
+  <main id="main-content">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-intro">
+        <p class="eyebrow"><span aria-hidden="true"></span>Revision control for agent work</p>
+        <h1 id="hero-title">When the brief changes,<br><em>your work should know</em><br>what still counts.</h1>
+      </div>
+      <div class="hero-aside">
+        <p>Delta traces a changed request through the work already completed. Before another run starts, you can see what survives, what needs rebuilding, and what the next move costs.</p>
+        <div class="hero-actions">
+          <a class="button button-coral" href="/app/revisions">See Delta decide <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#product">Explore the desk <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <div class="hero-caption"><span>Delta / 01</span><span>Paid work, revised with care</span></div>
+    </section>
+
+    <section id="product" class="desk-section" aria-labelledby="desk-title">
+      <div class="section-heading desk-heading">
+        <div>
+          <p class="eyebrow">The Revision Desk</p>
+          <h2 id="desk-title">A change is not a reason<br>to start from zero.</h2>
+        </div>
+        <p>This is an illustrative preview of Delta's revision model. It does not create a provider job or spend funds.</p>
+      </div>
+
+      <div class="desk" data-scenario="date">
+        <div class="desk-topbar">
+          <div class="desk-project"><span class="project-dot" aria-hidden="true"></span><span>Launch package</span><span class="preview-chip">Preview</span></div>
+          <span>Revision 04</span>
+        </div>
+        <div class="desk-grid">
+          <aside class="change-panel" aria-label="Choose an illustrative changed input">
+            <p class="panel-label">What changed?</p>
+            <div class="scenario-list" role="tablist" aria-label="Revision examples">
+              <button id="scenario-date" class="scenario active" type="button" role="tab" aria-selected="true" data-scenario="date"><span class="scenario-index">01</span><span><strong>Launch date</strong><small>Sep 10 → Sep 18</small></span></button>
+              <button id="scenario-visual" class="scenario" type="button" role="tab" aria-selected="false" data-scenario="visual"><span class="scenario-index">02</span><span><strong>Visual direction</strong><small>Studio → Outdoor</small></span></button>
+              <button id="scenario-product" class="scenario" type="button" role="tab" aria-selected="false" data-scenario="product"><span class="scenario-index">03</span><span><strong>Product details</strong><small>Charger → Power station</small></span></button>
+            </div>
+            <div class="change-note"><span class="change-glyph" aria-hidden="true">∆</span><p id="change-note">The new date only changes the announcement. Its translation waits for the updated source.</p></div>
+          </aside>
+
+          <div class="work-map" aria-live="polite">
+            <div class="work-map-header"><span>Work map</span><span id="map-change">1 input changed</span></div>
+            <div class="map-stage">
+              <svg class="map-lines" viewBox="0 0 700 380" preserveAspectRatio="none" aria-hidden="true"><path class="line-visual" d="M186 185 C272 185, 293 185, 360 185"></path><path class="line-copy" d="M500 185 C548 185, 552 185, 605 185"></path><path class="line-branch" d="M500 190 C530 260, 550 282, 605 285"></path></svg>
+              <article class="work-card visual-card status-keep">
+                <div class="work-card-meta"><span>01 / Existing</span><span class="state state-keep">Keep</span></div>
+                <h3>Product visual</h3>
+                <p>Brief still matches the approved art direction.</p>
+                <span class="work-cost">No added cost</span>
+              </article>
+              <article class="work-card copy-card status-rebuild">
+                <div class="work-card-meta"><span>02 / Changed</span><span class="state state-rebuild">Rebuild</span></div>
+                <h3>Launch announcement</h3>
+                <p>Its launch date has changed.</p>
+                <span class="work-cost">Quote before run</span>
+              </article>
+              <article class="work-card translation-card status-wait">
+                <div class="work-card-meta"><span>03 / Dependent</span><span class="state state-wait">Wait</span></div>
+                <h3>Translation</h3>
+                <p>It needs the revised announcement first.</p>
+                <span class="work-cost">Calculated after 02</span>
+              </article>
+            </div>
+            <div class="map-footer"><span id="map-summary">1 kept · 1 to rebuild · 1 waiting</span><a href="/app/revisions">Open this workflow <span aria-hidden="true">↗</span></a></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="method" class="method-section" aria-labelledby="method-title">
+      <div class="method-title"><p class="eyebrow">Before execution</p><h2 id="method-title">Delta turns a vague<br>revision into a <em>specific decision.</em></h2></div>
+      <div class="method-rail">
+        <article><span>01</span><h3>Read the change</h3><p>Compare the current request with the inputs that produced the saved work.</p></article>
+        <article><span>02</span><h3>Trace the effects</h3><p>Follow only the explicit dependencies that are affected by the new information.</p></article>
+        <article><span>03</span><h3>Show the boundary</h3><p>Make the next run, known cost, and approval requirement visible before action.</p></article>
+      </div>
+    </section>
+
+    <section class="decision-section" aria-labelledby="decision-title">
+      <div class="decision-card">
+        <p class="eyebrow">What the system can say</p>
+        <h2 id="decision-title">“Keep the visual.<br>Rebuild the announcement.<br><em>Wait on translation.</em>”</h2>
+        <p class="decision-copy">Every result has a reason beside it. No generic rerun button, no assumed provider success, and no replacement job while an earlier paid attempt is unresolved.</p>
+        <a class="button button-paper" href="/app/revisions">Plan a revision <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="decision-annotation" aria-hidden="true"><span>Keep</span><span>Rebuild</span><span>Wait</span></div>
+    </section>
+
+    <section id="continuity" class="continuity-section" aria-labelledby="continuity-title">
+      <div class="continuity-copy"><p class="eyebrow">Continuity, not theater</p><h2 id="continuity-title">Work can pause.<br>Its history should not disappear.</h2></div>
+      <div class="continuity-list">
+        <article><span class="continuity-mark mark-save" aria-hidden="true"></span><div><h3>Saved work has context</h3><p>Delta retains the identity, inputs, output reference, and freshness needed to decide whether a result still holds.</p></div></article>
+        <article><span class="continuity-mark mark-job" aria-hidden="true"></span><div><h3>Provider work stays attached</h3><p>Known and ambiguous paid jobs are reconciled before a replacement can be considered.</p></div></article>
+        <article><span class="continuity-mark mark-proof" aria-hidden="true"></span><div><h3>Success needs evidence</h3><p>An unavailable artifact, a missing provider response, or unclear settlement remains visible as such.</p></div></article>
+      </div>
+    </section>
+
+    <section class="closing-section" aria-labelledby="closing-title">
+      <p class="eyebrow">Start with one revision</p>
+      <h2 id="closing-title">Your agents can do more.<br><em>Your revision process can be smarter.</em></h2>
+      <a class="button button-coral" href="/app/revisions">Open Delta <span aria-hidden="true">↗</span></a>
+    </section>
+  </main>
+
+  <footer class="site-footer"><a class="brand" href="/"><img src="/static/logo.svg" width="30" height="30" alt=""><span>delta</span></a><p>Revision control for agent work.</p><div><a href="#product">Product</a><a href="#method">Method</a><a href="/app/revisions">Workspace</a></div></footer>
+  <script src="/static/landing.js" defer></script>
+</body>
+</html>

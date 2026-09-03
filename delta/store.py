@@ -281,6 +281,10 @@ class SibylStore:
             "provider_job_id": attempt.provider_job_id,
             "provider_chain_id": attempt.provider_chain_id,
             "error_code": attempt.error_code,
+            "provider_id": attempt.provider_id,
+            "offering_id": attempt.offering_id,
+            "offering_name": attempt.offering_name,
+            "requirements_signature": attempt.requirements_signature,
         }
         self._save_entity(
             ATTEMPT_CATEGORY,
@@ -308,6 +312,10 @@ class SibylStore:
             provider_job_id=payload.get("provider_job_id"),
             provider_chain_id=payload.get("provider_chain_id"),
             error_code=payload.get("error_code"),
+            provider_id=payload.get("provider_id"),
+            offering_id=payload.get("offering_id"),
+            offering_name=payload.get("offering_name"),
+            requirements_signature=payload.get("requirements_signature"),
         )
 
     def set_active_attempt(self, step_id: str, attempt_id: str | None) -> None:

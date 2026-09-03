@@ -40,7 +40,7 @@ from .core import (
 from .store import SibylPersistenceError, SibylScopeError, SibylStore, SibylUnavailable
 from .execute import CostSummary, DeltaEngine, ExecutionBlocked, ExecutionReport
 from .artifacts import ArtifactResolution, ArtifactResolutionStatus, ArtifactSafetyError, ArtifactStore
-from .providers import ACPAdapter, ACPCommandRunner, ACPCommandStatus, ACPSpendLedger, ChainEvidence, FundingOutcome, FundingReconciliation, ReconciliationDecision, ReconciliationOutcome, match_reconciliation_candidates, parse_chain_evidence, reconcile_funding
+from .providers import ACPAdapter, ACPCommandRunner, ACPCommandStatus, ACPDeliverableVerification, ACPObservationSource, ACPSettlementEvidence, ACPSpendLedger, ChainEvidence, FundingOutcome, FundingReconciliation, ReconciliationDecision, ReconciliationOutcome, match_reconciliation_candidates, parse_chain_evidence, reconcile_funding
 
 __all__ = [
     "ApprovalValidationError",
@@ -93,6 +93,9 @@ __all__ = [
     "ACPAdapter",
     "ACPCommandRunner",
     "ACPCommandStatus",
+    "ACPDeliverableVerification",
+    "ACPObservationSource",
+    "ACPSettlementEvidence",
     "ACPSpendLedger",
     "ChainEvidence",
     "FundingOutcome",
