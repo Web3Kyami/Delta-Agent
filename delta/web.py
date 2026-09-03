@@ -31,7 +31,7 @@ APP_VIEWS = {
     "/app/revisions": ("revisions", "Revisions"),
     "/app/revisions/latest/preview": ("revisions", "Revision preview"),
     "/app/revisions/latest/execute": ("runs", "Execution"),
-    "/app/revisions/latest": ("runs", "Revision result"),
+    "/app/revisions/latest": ("runs", "Revision complete"),
     "/app/runs": ("runs", "Runs"),
     "/app/continuity": ("continuity", "Continuity"),
     "/app/integrations": ("integrations", "Integrations"),
@@ -93,9 +93,16 @@ class DeltaWebApp:
     def _respond_app(self, environ: dict[str, Any], start_response: Callable[..., Any], view: str, title: str):
         document = APP_TEMPLATE_PATH.read_text()
         document = document.replace("{{VIEW}}", view).replace("{{PAGE_TITLE}}", title)
+        nav_view = {
+            "overview": "overview",
+            "revisions": "overview",
+            "runs": "runs",
+            "continuity": "runs",
+            "integrations": "integrations",
+        }.get(view, view)
         for candidate in ("overview", "revisions", "runs", "continuity", "integrations"):
-            document = document.replace(f"{{{{ACTIVE_{candidate.upper()}}}}}", "active" if candidate == view else "")
-            document = document.replace(f"{{{{CURRENT_{candidate.upper()}}}}}", 'aria-current="page"' if candidate == view else "")
+            document = document.replace(f"{{{{ACTIVE_{candidate.upper()}}}}}", "active" if candidate == nav_view else "")
+            document = document.replace(f"{{{{CURRENT_{candidate.upper()}}}}}", 'aria-current="page"' if candidate == nav_view else "")
             document = document.replace(f"{{{{HIDDEN_{candidate.upper()}}}}}", "" if candidate == view else "hidden")
         body = document.encode()
         cookie = self._cookie(environ, "delta_csrf")

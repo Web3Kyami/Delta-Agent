@@ -8,11 +8,12 @@
   const errorSummary = document.querySelector("#error-summary");
   const liveStatus = document.querySelector("#live-status");
   const steps = document.querySelector("#steps");
-  const readoutPanel = document.querySelector(".readout-panel");
+  const readoutPanel = document.querySelector(".preview-surface");
   const navOpen = document.querySelector("#nav-open");
   const navClose = document.querySelector("#nav-close");
   const navOverlay = document.querySelector("#nav-overlay");
   const continuityRestore = document.querySelector("#continuity-restore");
+  const initializeDemoButton = document.querySelector("#initialize-demo-button");
   const currentView = document.body.dataset.view;
   const initialInputValues = form ? Object.fromEntries(new FormData(form).entries()) : {};
   let latestPlanId = null;
@@ -103,6 +104,44 @@
     }
   }
 
+  function applyRouteMode() {
+    const title = document.body.dataset.routeTitle || document.title;
+    const change = document.querySelector(".change-layout");
+    const changeHeading = document.querySelector(".change-heading");
+    const preview = document.querySelector(".preview-layout");
+    if (change) change.hidden = title === "Revision preview";
+    if (changeHeading) changeHeading.hidden = title === "Revision preview";
+    if (preview) preview.hidden = title === "Change request";
+    document.querySelectorAll(".stage-link").forEach(link => {
+      const href = link.getAttribute("href") || "";
+      const active = (title === "Overview" || title === "Workflow") && href.endsWith("launch-package")
+        || title === "Change request" && href.endsWith("/revise")
+        || title === "Revision preview" && href.endsWith("/preview")
+        || title === "Execution" && href.endsWith("/execute")
+        || (title === "Revision result" || title === "Revision complete") && href.endsWith("/latest");
+      link.classList.toggle("is-active", Boolean(active));
+    });
+  }
+
+  function setRouteView(title, view) {
+    document.body.dataset.routeTitle = title;
+    document.title = `${title} | Delta`;
+    const contextTitle = document.querySelector(".context-line strong");
+    if (contextTitle) contextTitle.textContent = title;
+    const sections = {
+      overview: "#overview",
+      revisions: "#revision-lab",
+      runs: "#runs",
+      continuity: "#memory",
+      integrations: "#integrations"
+    };
+    Object.entries(sections).forEach(([key, selector]) => {
+      const section = document.querySelector(selector);
+      if (section) section.hidden = key !== view;
+    });
+    applyRouteMode();
+  }
+
   async function request(path, options = {}) {
     const response = await fetch(path, {
       credentials: "same-origin",
@@ -137,12 +176,7 @@
   }
 
   function displayReason(step) {
-    const reasons = {
-      REUSE_VALID_RESULT: "This output still matches the current request.",
-      RERUN_NO_VALID_RESULT: "No saved output matches these inputs.",
-      PENDING_DEPENDENCY_OUTPUT: "This step needs a revised upstream output first."
-    };
-    return reasons[step.reason_code] || step.reason;
+    return step.reason || step.reason_code || "Delta did not return a reason for this decision.";
   }
 
   function renderStep(step, index) {
@@ -214,93 +248,91 @@
   function renderWorkflowArtifacts(payload) {
     const container = document.querySelector("#workflow-artifacts");
     if (!container) return;
+    const empty = document.querySelector("#workflow-empty");
+    const payloadSteps = payload.steps || [];
+    const hasSavedOutput = payloadSteps.some(step => step.current_output !== null && step.current_output !== undefined);
     container.replaceChildren();
-    (payload.steps || []).forEach((step, index) => {
+    if (!hasSavedOutput) {
+      container.hidden = true;
+      if (empty) empty.hidden = false;
+      return;
+    }
+    container.hidden = false;
+    if (empty) empty.hidden = true;
+    payloadSteps.forEach((step, index) => {
       const card = document.createElement("article");
-      card.className = "workflow-artifact";
+      card.className = "work-item";
       const hasOutput = step.current_output !== null && step.current_output !== undefined;
-      card.dataset.state = hasOutput ? (step.source === "deterministic fixture" ? "fixture" : "saved") : "empty";
-      const head = document.createElement("div"); head.className = "workflow-artifact-head";
-      addText(head, "span", `${String(index + 1).padStart(2, "0")} / ${step.label}`);
-      addText(head, "span", hasOutput ? "Saved" : "Not available", `status-pill ${hasOutput ? "status-reuse" : "status-idle"}`);
-      card.appendChild(head);
-      addText(card, "h3", hasOutput ? "Current output" : "No saved output");
-      addText(card, "pre", hasOutput ? JSON.stringify(step.current_output, null, 2) : "This workflow has no matching completed output for the current request.", "artifact-output");
-      const meta = document.createElement("div"); meta.className = "artifact-meta";
-      const execution = document.createElement("div");
-      addText(execution, "span", step.completed_at ? "Last execution" : "Freshness");
-      addText(execution, "strong", step.completed_at ? new Date(step.completed_at).toLocaleString() : "Unknown");
-      meta.appendChild(execution);
-      const cost = document.createElement("div");
-      addText(cost, "span", "Actual cost");
-      const costValue = step.actual_cost != null
-        ? `${step.actual_cost} ${step.actual_cost_currency || "USDC"}`
-        : (step.actual_cost_status === "not_applicable_fixture" ? "Not applicable" : "Unknown");
-      addText(cost, "strong", costValue);
-      meta.appendChild(cost);
-      const provider = step.provider || (step.job_id ? `Job ${step.job_id}` : "Not attached");
-      const providerLine = document.createElement("div");
-      addText(providerLine, "span", "Provider");
-      addText(providerLine, "strong", provider);
-      meta.appendChild(providerLine);
-      card.appendChild(meta); container.appendChild(card);
+      card.dataset.state = hasOutput ? "saved" : (step.decision === "pending_dependency" ? "pending" : step.decision || "empty");
+      const main = document.createElement("div"); main.className = "work-item-main";
+      addText(main, "span", String(index + 1).padStart(2, "0"), "work-index");
+      const title = document.createElement("div");
+      addText(title, "h3", step.label);
+      addText(title, "p", hasOutput ? (step.source === "deterministic fixture" ? "Deterministic fixture output" : "Saved output") : (step.decision === "pending_dependency" ? "Waiting for the upstream output." : "No matching saved output."));
+      main.appendChild(title); card.appendChild(main);
+      const copy = hasOutput ? step.current_output : (step.decision === "pending_dependency" ? "Translation will be resolved after its announcement dependency runs." : "No completed output exists for this request.");
+      addText(card, "pre", typeof copy === "string" ? copy : JSON.stringify(copy, null, 2), "artifact-copy");
+      const label = hasOutput ? (step.source === "deterministic fixture" ? "Fixture output" : "Saved") : (step.decision === "pending_dependency" ? "Pending" : "Not available");
+      addText(card, "span", label, `state-label ${hasOutput ? "" : step.decision === "pending_dependency" ? "state-pending" : "state-empty"}`);
+      container.appendChild(card);
     });
-    if (!payload.steps || payload.steps.length === 0) addText(container, "p", "No workflow state was returned.", "compact-empty");
+  }
+
+  function setText(id, value) {
+    const node = document.querySelector(id);
+    if (node) node.textContent = value == null ? "Unknown" : String(value);
   }
 
   function render(payload) {
     latestPlanId = payload.status === "previewed" ? (payload.plan_id || null) : null;
-    const state = document.querySelector("#readout-state");
-    state.textContent = payload.status === "executed" ? "Executed" : (payload.status === "loaded" ? "Loaded" : "Previewed");
-    state.className = `status-pill ${payload.status === "executed" ? "status-reuse" : "status-idle"}`;
-    document.querySelector("#estimated-cost").textContent = payload.estimated_additional_service_cost == null ? "Unknown" : `${payload.estimated_additional_service_cost} ${payload.estimated_cost_currency}`;
-    document.querySelector("#cost-source").textContent = payload.estimated_cost_source === "deterministic fixture" ? "Demo estimate" : (payload.estimated_cost_source || "Unknown");
-    document.querySelector("#plan-id").textContent = payload.plan_id || "Not created";
-    const actualCost = payload.execution ? payload.execution.actual_service_cost : payload.actual_service_cost;
-    document.querySelector("#actual-cost").textContent = actualCost == null ? (payload.actual_cost_status === "not_applicable_fixture" ? "Not applicable" : "Not recorded") : `${actualCost} USDC`;
     const payloadSteps = payload.steps || [];
+    const hasSavedOutput = payloadSteps.some(step => step.current_output !== null && step.current_output !== undefined);
+    const state = document.querySelector("#readout-state");
+    if (state) {
+      state.textContent = payload.status === "executed" ? "Executed" : (payload.status === "loaded" ? "Loaded" : "Previewed");
+      state.className = `status-pill ${payload.status === "executed" ? "status-reuse" : "status-idle"}`;
+    }
+    setText("#estimated-cost", payload.estimated_additional_service_cost == null ? "Unknown" : `${payload.estimated_additional_service_cost} ${payload.estimated_cost_currency}`);
+    setText("#plan-id", payload.plan_id || "Not created");
+    const actualCost = payload.execution ? payload.execution.actual_service_cost : payload.actual_service_cost;
+    setText("#actual-cost", actualCost == null ? (payload.actual_cost_status === "not_applicable_fixture" ? "Not applicable" : "Not recorded") : `${actualCost} USDC`);
     renderWorkflowArtifacts(payload);
-    document.querySelector("#reuse-count").textContent = payloadSteps.filter(step => step.decision === "reuse").length;
-    document.querySelector("#rerun-count").textContent = payloadSteps.filter(step => step.decision === "rerun").length;
-    document.querySelector("#pending-count").textContent = payloadSteps.filter(step => step.decision === "pending_dependency").length;
-    document.querySelector("#run-project").textContent = payload.project_id || "Unknown project";
-    document.querySelector("#run-state").textContent = payload.status === "executed" ? "Executed" : (payload.status === "loaded" ? "Recovered" : "Preview ready");
-    document.querySelector("#run-state").className = `status-pill ${payload.status === "executed" ? "status-reuse" : "status-awaiting"}`;
-    document.querySelector("#run-generated").textContent = payload.generated_at ? new Date(payload.generated_at).toLocaleString() : "Unknown";
-    steps.replaceChildren();
-    if (!payload.steps || payload.steps.length === 0) {
-      addText(steps, "div", "No workflow state was returned.", "empty-readout");
-    } else {
-      payload.steps.forEach((step, index) => steps.appendChild(renderStep(step, index)));
+    const changedCount = payloadSteps.filter(step => step.decision !== "reuse").length;
+    setText("#changed-step-count", changedCount);
+    setText("#run-project", payload.project_id || "Unknown project");
+    setText("#run-generated", payload.generated_at ? new Date(payload.generated_at).toLocaleString() : "Unknown");
+    const runState = document.querySelector("#run-state");
+    if (runState) {
+      runState.textContent = payload.status === "executed" ? "Executed" : (payload.status === "loaded" ? "Recovered" : "Preview ready");
+      runState.className = `status-pill ${payload.status === "executed" ? "status-reuse" : "status-awaiting"}`;
+    }
+    if (steps) {
+      steps.replaceChildren();
+      if (!payloadSteps.length) addText(steps, "div", "No workflow state was returned.", "empty-readout");
+      else payloadSteps.forEach((step, index) => steps.appendChild(renderStep(step, index)));
     }
     const runSteps = document.querySelector("#run-steps");
     if (runSteps) {
       runSteps.replaceChildren();
-      payloadSteps.forEach((step, index) => runSteps.appendChild(renderRunStep(step, index)));
+      if (!payloadSteps.length) addText(runSteps, "div", "No recorded run state was returned.", "empty-readout");
+      else payloadSteps.forEach((step, index) => runSteps.appendChild(renderRunStep(step, index)));
     }
     const continuityResults = document.querySelector("#continuity-results");
     if (continuityResults && payload.status === "loaded") {
       continuityResults.replaceChildren();
       payloadSteps.forEach(step => continuityResults.appendChild(renderContinuityResult(step)));
     }
-    const hasRerun = (payload.steps || []).some(step => step.decision === "rerun");
+    const hasRerun = payloadSteps.some(step => step.decision === "rerun");
     executeShouldBeDisabled = !latestPlanId || !hasRerun || payload.status === "executed";
-    executeButton.disabled = executeShouldBeDisabled;
-    document.querySelector("#execution-note").textContent = payload.status === "executed"
-      ? "The fixture outputs were persisted. Preview again after changing an input to see a new rerun decision."
-      : hasRerun ? "This action runs only the configured local deterministic fixtures. It does not create ACP jobs or spend funds." : "Nothing new needs to run for these inputs. Change an input, then preview again to create work to execute.";
-
-    const hasSavedOutput = (payload.steps || []).some(step => step.current_output !== null && step.current_output !== undefined);
+    if (executeButton) executeButton.disabled = executeShouldBeDisabled;
+    setText("#execution-note", payload.status === "executed" ? "The deterministic outputs were persisted. Change an input and preview again to create a new revision." : hasRerun ? "Run only the configured deterministic fixtures. No ACP spend occurs." : "Nothing new needs to run for these inputs. Change an input, then preview again.");
     const recovery = document.querySelector("#recovery-banner");
-    recovery.hidden = payload.status !== "loaded" && !hasSavedOutput;
-    if (!recovery.hidden) document.querySelector("#recovery-message").textContent = hasSavedOutput ? "Persisted outputs were read from the project scope." : "Sibyl was checked for this project and no matching output was found.";
-    document.querySelector("#memory-state").textContent = hasSavedOutput ? "State loaded" : "Scope checked";
-    document.querySelector("#memory-state").className = `status-pill ${hasSavedOutput ? "status-reuse" : "status-awaiting"}`;
-    document.querySelector("#memory-copy").textContent = hasSavedOutput
-      ? "Saved outputs for this project were recovered and matched to the current request."
-      : "The project scope was checked and no matching reusable output was found.";
-    const overviewSaved = document.querySelector("#overview-saved");
-    if (overviewSaved) overviewSaved.textContent = hasSavedOutput ? `${payloadSteps.filter(step => step.current_output !== null && step.current_output !== undefined).length} outputs` : "No matching work";
+    if (recovery) recovery.hidden = payload.status !== "loaded" && !hasSavedOutput;
+    setText("#memory-state", hasSavedOutput ? "State loaded" : "Scope checked");
+    const memoryState = document.querySelector("#memory-state");
+    if (memoryState) memoryState.className = `status-pill ${hasSavedOutput ? "status-reuse" : "status-awaiting"}`;
+    setText("#memory-copy", hasSavedOutput ? "Saved outputs for this project were recovered from the persistent scope." : "The project scope was checked and no matching reusable output was found.");
+    setText("#overview-saved", hasSavedOutput ? `${payloadSteps.filter(step => step.current_output !== null && step.current_output !== undefined).length} outputs saved` : "No completed work");
     announce(payload.status === "executed" ? "Deterministic fixture workflow executed and persisted." : `Revision ${payload.status}.`);
   }
 
@@ -321,6 +353,7 @@
     setBusy(previewButton, true, "Previewing...");
     try {
       render(await request("/api/preview", { method: "POST", body: JSON.stringify(values()), headers: { "X-CSRF-Token": getCsrfToken() } }));
+      setRouteView("Revision preview", "revisions");
       clearError();
     } catch (error) {
       showError(error.message);
@@ -343,14 +376,28 @@
     }
   }
 
-  restoreButton.addEventListener("click", () => restoreSavedWork(restoreButton));
+  if (restoreButton) restoreButton.addEventListener("click", () => restoreSavedWork(restoreButton));
   if (continuityRestore) continuityRestore.addEventListener("click", () => restoreSavedWork(continuityRestore));
+
+  if (initializeDemoButton) initializeDemoButton.addEventListener("click", async () => {
+    setBusy(initializeDemoButton, true, "Creating...");
+    try {
+      const preview = await request("/api/preview", { method: "POST", body: JSON.stringify(values()), headers: { "X-CSRF-Token": getCsrfToken() } });
+      render(await request("/api/execute", { method: "POST", body: JSON.stringify({ ...values(), plan_id: preview.plan_id }), headers: { "X-CSRF-Token": getCsrfToken() } }));
+      clearError();
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setBusy(initializeDemoButton, false);
+    }
+  });
 
   executeButton.addEventListener("click", async () => {
     if (!latestPlanId || !validateClient()) return;
     setBusy(executeButton, true, "Executing...");
     try {
       render(await request("/api/execute", { method: "POST", body: JSON.stringify({ ...values(), plan_id: latestPlanId }), headers: { "X-CSRF-Token": getCsrfToken() } }));
+      setRouteView("Revision complete", "runs");
       clearError();
     } catch (error) {
       if (error.message.toLowerCase().includes("preview") && error.message.toLowerCase().includes("stale")) invalidatePreview();
@@ -378,6 +425,8 @@
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && document.body.classList.contains("nav-visible")) setNavigation(false);
   });
+
+  applyRouteMode();
 
   if (["overview", "runs"].includes(currentView)) {
     const query = new URLSearchParams(values());

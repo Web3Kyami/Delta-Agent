@@ -1,5 +1,14 @@
 # Delta State
 
+## 2026-09-03 application redesign
+
+- Replaced the generic application shell with one connected work-first journey: completed Launch Package, change request, planner preview, execution/result, runs, integrations, and contextual recovery. The public landing page and engine/integration behavior were not changed.
+- Launch Package now reads the project-scoped `/api/state` response and gives persisted outputs visual priority. Missing work shows the honest `No launch package exists yet.` state with `Create demo launch package`, which calls the real deterministic preview and execute endpoints.
+- The change surface keeps Project ID non-editable, uses human-readable language names, marks changed inputs, and transitions to a planner view whose decision reasons come from backend state. The preview exposes reuse, rerun, pending dependency, known/unknown cost, approval boundary, and stale-preview messaging without invented savings.
+- Execution/result is a dedicated, backend-driven run surface with chronological steps, persisted outputs, fixture labels, actual-cost separation, recovery context, and an explicit live-provider limitation. Integrations separates active runtime connections from verified external evidence.
+- Application-only CSS and JavaScript were updated for compact top navigation, artifact-first layouts, dependency sequencing, keyboard/mobile behavior, reduced motion, and 1440/1024/768/390 viewport checks. Screenshots are in `.delta/review/` and remain ignored local review artifacts.
+- Verification: full `.venv/bin/python -m pytest -q` passed; focused `tests/test_phase5_web.py` passed (7 tests); `node --check delta/static/app.js` and Python bytecode compilation passed. Deterministic API coverage confirms launch-date-only change produces `reuse`, `rerun`, `pending_dependency`, stale execution is blocked, and outputs persist through Sibyl.
+
 ## 2026-09-03 application experience pass
 
 - Reworked the existing application workspace around a progressive completed-work flow: workflow overview, change request, revision preview, execution/result, workflow history, and reconciliation aliases. The public landing page was not changed in this pass.

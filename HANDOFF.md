@@ -1,5 +1,11 @@
 # Delta Handoff
 
+The latest application redesign is implemented locally and leaves the public landing page untouched. The in-product flow now reads as one journey: completed Launch Package → What changed? → Preview impact → Run revision → Revision complete → Runs/recovery. It uses the existing Sibyl-backed API responses and keeps deterministic fixture output, unknown costs, unavailable live actions, stale previews, and reconciliation states explicit.
+
+Changed application files: `delta/templates/index.html`, `delta/static/app-overrides.css`, `delta/static/app.js`, and the small route/nav mapping in `delta/web.py`. The Phase 5 route assertions were updated to match the new product language. Responsive review captures for 1440, 1024, 768, and 390 pixels are stored under `.delta/review/`.
+
+Verification is complete for this UI slice: full suite passed (74 tests), focused Phase 5 web tests passed (7), JavaScript syntax check passed, and the deterministic launch-date revision path returned `reuse → rerun → pending_dependency`, blocked stale execution, and persisted outputs through Sibyl. No live ACP or Base success is claimed.
+
 The local interface now has a public product site and separate application routes for Overview, Revisions, Runs, Continuity, and Integrations. `DESIGN.md` owns the page map, visual system, content rules, and staged interface roadmap. Preserve its honest live-versus-fixture states when connecting future ACP and Base behavior.
 
 The latest application pass leaves the public site untouched and makes the in-product journey explicit: `/app/workflows/launch-package` shows completed work and saved artifacts, `/app/workflows/launch-package/revise` edits inputs, `/app/revisions/latest/preview` and `/app/revisions/latest/execute` resolve to the existing preview and execution surfaces, `/app/workflows/launch-package/history` exposes the run surface, and `/app/jobs/<id>` opens reconciliation context. These are server-rendered aliases over the existing Sibyl-backed API path, not new simulated execution states.

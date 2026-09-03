@@ -108,11 +108,11 @@ class PhaseFiveWebTests(unittest.TestCase):
 
     def test_application_routes_have_distinct_active_pages(self) -> None:
         expected = {
-            "/app/overview": "Good morning.",
-            "/app/revisions": "Revise completed work",
+            "/app/overview": "Launch Package",
+            "/app/revisions": "What changed?",
             "/app/runs": "Runs",
-            "/app/continuity": "Pick up where the work stopped",
-            "/app/integrations": "Execution stack",
+            "/app/continuity": "Reconciliation context",
+            "/app/integrations": "Runtime and evidence",
         }
         for path, heading in expected.items():
             status, body, _ = self.client.request(path)
@@ -132,7 +132,7 @@ class PhaseFiveWebTests(unittest.TestCase):
             "/app/workflows/launch-package/revise": "Change request",
             "/app/revisions/latest/preview": "Revision preview",
             "/app/revisions/latest/execute": "Execution",
-            "/app/revisions/latest": "Revision result",
+            "/app/revisions/latest": "Revision complete",
             "/app/workflows/launch-package/history": "Workflow history",
             "/app/jobs/75656": "Reconciliation",
         }
