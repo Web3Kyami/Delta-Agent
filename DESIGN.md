@@ -59,18 +59,18 @@ The current release has one launch-package project. A project switcher must not 
 
 The Delta mark represents controlled change. Three sides form a stable system and one colored segment identifies the part that changes. The name is lowercase in the wordmark and sentence case in prose.
 
-The visual character is editorial, precise, and slightly unconventional. It uses warm paper, ink, persimmon, moss, and cobalt rather than a generic dark AI palette. It avoids glowing gradients, glass cards, invented proof, and repeated three-column feature grids.
+The public site feels like a kinetic execution system: precise, technical, high contrast, and visibly shaped by Delta's revision model. Deep graphite is the main field, cold white creates section contrast, orange marks changed or rerun work, cool violet marks unresolved dependencies, and muted neutral marks preserved work. Solid color, geometry, topology, and purposeful motion carry the identity. The rejected warm-paper editorial direction must not be recreated.
 
 ### Marketing composition
 
 - Purpose: establish the category and make the mechanism understandable
-- Focal point: the Revision Desk, an interactive work map that visibly changes when a scenario changes
-- Layout gravity: a large editorial promise above a framed product demonstration
-- Typography: Instrument Serif for editorial statements, DM Sans for product language, and DM Mono for state and metadata
-- Palette: warm paper and ink as the base, persimmon for a changed path, moss for preserved work, and cobalt for a waiting dependency
-- Surfaces: thin rules, flat planes, stippled work-map background, and one deliberate framed product demonstration
-- Motion: state transitions and tab selection only. Motion explains a changed decision and respects reduced-motion preferences.
-- Mobile: product demonstration becomes a vertical flow and the primary call to action remains visible
+- Focal point: a completed three-step workflow with believable illustrative artifacts and a changed input entering the dependency topology
+- Layout gravity: concise promise beside a product visualization that is visible without scrolling on a typical desktop viewport
+- Typography: Manrope for strong technical hierarchy and DM Mono only for state, signatures, IDs, cost, and metadata
+- Palette: graphite and cold white fields, Delta orange for changed or rerun work, restrained violet for unresolved dependencies, and neutral green-gray for preserved work
+- Surfaces: compact technical planes, small radii, crisp borders, and connected paths. No paper shadows, glass, decorative gradients, or generic card grids
+- Motion: the Delta change signal travels through affected declared dependencies, then node states settle. Reduced motion exposes the same final state immediately.
+- Mobile: the workflow becomes a deliberate vertical dependency flow with full text state and early access to the primary action
 
 ### Application composition
 
@@ -154,11 +154,15 @@ Exercise landing calls to action, every application route, preview, execute, cha
 
 Checked on 2026-09-03:
 
-- Relevance AI Workforce uses a product-specific workflow demonstration directly beneath its main promise and provides clear demo and trial actions: https://relevanceai.com/workforce
-- Jibu AI shows a concrete product interaction in its hero rather than delaying the product explanation: https://jibu-ai.com/
-- Lindy presents the product through concrete work surfaces and separates use cases, integrations, product access, and documentation: https://www.lindy.ai/
-- LangSmith separates assistants, threads, runs, deployment, and observability: https://docs.langchain.com/langsmith/deployment
+- Relevance AI Workforce brings the visual canvas and connected agent topology close to the main promise. Delta uses this structural lesson to show its real three-step dependency model immediately: https://relevanceai.com/workforce
+- Lindy makes concrete product artifacts carry the story and keeps primary product access persistent in navigation. Delta uses compact visual, announcement, and translation artifacts instead of abstract agent artwork: https://www.lindy.ai/
+- Browser Use leads with an unusually direct product statement and keeps technical product concepts visually dense. Delta applies that directness while retaining its own execution-record language: https://browser-use.com/
+- Inngest explains developer infrastructure through durable execution states and code-to-record storytelling. Delta uses a compact workflow definition paired with its resulting work record: https://www.inngest.com/
 - Radix documents accessible focus, keyboard, and state behavior: https://www.radix-ui.com/primitives/docs/overview/accessibility
 - Component Gallery and Web Interface Guidelines informed component anatomy and interaction review: https://component.gallery/ and https://interfaces.rauno.me/
 
 These references provide structural evidence only. Delta does not copy their branding, claims, code, or interface.
+
+### Landing redesign implementation note
+
+Useful structural ideas are: put the behavior above the fold, use the topology itself as the hero artifact, let motion show causality, place real-looking but clearly illustrative output inside nodes, alternate dense dark execution fields with cold-white explanatory fields, simplify the topology into a vertical flow on mobile, and keep navigation actions literal. Delta's identity remains its controlled change signal, explicit reuse/rerun/pending decisions, paid-job reconciliation, and inspectable work record.

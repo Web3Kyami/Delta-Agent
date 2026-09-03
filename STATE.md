@@ -1,5 +1,13 @@
 # Delta State
 
+## 2026-09-03 public landing redesign
+
+- Replaced the rejected warm-paper editorial landing direction with a graphite, cold-white, orange, and violet execution system.
+- Added an above-the-fold interactive workflow topology for launch date, visual brief, and product description scenarios, with illustrative artifacts and explicit reuse, rerun, and pending states.
+- Added paid-job continuity, developer record, integration lifecycle, and compact final action sections. Application routes and engine behavior were not changed.
+- Verified the complete test suite: `73 passed, 15 subtests passed`.
+- Rendered the landing page at 1440, 1024, 768, and 390 CSS pixel widths. The hero visualization is visible without scrolling at desktop size, and the mobile workflow becomes a readable vertical dependency flow without horizontal overflow.
+
 Last updated: 2026-09-03 (brand and product interface build)
 
 ## Completed
