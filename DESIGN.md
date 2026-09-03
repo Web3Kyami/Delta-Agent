@@ -1,178 +1,133 @@
 # Delta product design
 
-## Product position
+## Purpose and audience
 
-Delta is revision control for paid agent work. A user changes a request, previews the impact, and runs only the work that no longer matches. Delta preserves usable output and keeps interrupted paid jobs from being purchased twice.
+Delta is revision control for paid agent work. A developer changes a request, previews what remains usable, and runs only the work that no longer matches. Delta preserves usable output and keeps interrupted paid jobs from being purchased twice.
 
-The primary audience is a developer or technical operator building workflows that include paid external agents. The secondary audience is a hackathon judge who must understand the product in a few minutes.
+The primary audience is a developer or technical operator building workflows that include paid external agents. A secondary audience is a judge or reviewer who needs to understand the mechanism quickly and inspect the evidence behind it.
 
-## Product architecture
+## Durable product principles
 
-Delta has two connected surfaces with different jobs.
+- Developers explicitly declare workflow steps, relevant inputs, dependencies, implementation versions, freshness policies, and provider adapters.
+- Delta never asks an LLM to infer a dependency graph from a repository or from vague context.
+- The user must be able to understand what existing work remains usable, what must rerun, why, and what additional cost is known.
+- The UI must use the real backend state that supports the claim it presents.
+- Fixture output is always labelled as fixture output. It is never presented as a live provider result.
+- Unknown cost remains unknown. Estimates and actual cost are separate values.
+- Editing revision inputs invalidates a stale preview. Execution requires a current preview for the exact input set.
+- Paid actions require an explicit spending boundary. Ambiguous paid work is reconciled before replacement execution is offered.
+- Work artifacts and revision decisions have visual priority over infrastructure and provider branding.
+- The interface exposes honest loading, empty, unavailable, blocked, failure, recovery, and ambiguous states.
+- Accessibility is required: semantic structure, visible focus, keyboard operation, readable contrast, reduced-motion behavior, and deliberate responsive layouts.
+- Motion explains causality, such as an upstream change affecting a declared downstream dependency. It does not decorate the interface or imply progress that did not occur.
 
-### Public site
+## Application architecture
 
-The public site explains the product, demonstrates the revision model, answers the main trust questions, and leads to one action: open the workspace.
+The application is organized around the user's revision journey:
 
-Routes and sections:
+1. Existing completed work
+2. Change request
+3. Revision preview
+4. Approval, when spending is applicable
+5. Execution
+6. Result
+7. History and recovery when needed
 
-- `/`: product story, interactive revision example, core capabilities, execution model, integration context, and final call to action
-- The primary call to action opens `/app/revisions`
-- Product navigation links move to meaningful sections on the public page
+The exact routes, navigation model, template boundaries, and component choices are implementation decisions. Existing routes may remain temporarily for compatibility. Their presence must not become a permanent product requirement.
 
-### Application
+Revision is primarily an action performed on existing work. Continuity and reconciliation are states associated with an interrupted or ambiguous run. They do not require permanent top-level navigation unless later testing shows that this helps users. Runs and integrations may exist as supporting views, but they must not obscure the primary journey.
 
-The application uses real routes. Sidebar navigation changes the current page instead of scrolling a long document.
+## Work-first principle
 
-- `/app/overview`: project status, current revision summary, and the next useful action
-- `/app/revisions`: edit the request, preview impact, and execute the approved local path
-- `/app/runs`: inspect current run and step-level states
-- `/app/continuity`: recover saved work and inspect reusable outputs
-- `/app/integrations`: inspect persistence, provider, and settlement connections
+The application should show the actual work before showing system metadata. For the launch-package workflow, the primary view should make these outputs understandable:
 
-The current release has one launch-package project. A project switcher must not imply multiple projects until project selection exists.
+- product visual
+- announcement
+- translation
 
-## Main user journeys
+Signatures, provider identity, job IDs, persistence tiers, chain evidence, and similar metadata should appear contextually when useful. They should not dominate the first view. The primary action should be obvious and should move the user to the next stage of the revision journey.
 
-### First visit
+## Application states and interaction
 
-1. Understand that Delta avoids repeating paid work after a request changes.
-2. Interact with a launch-date, visual-brief, or product-description change example.
-3. Open the workspace.
+The application may use a contextual stage indicator for the journey from work to result. It should communicate location and available next actions rather than act as decorative progress.
 
-### Revision
+The completed-work state should establish that work already exists and show the current outputs or honest empty state. If a deterministic demo has no completed work, initialization must call the real Delta planner and persistence path, then render the resulting state. It must not inject successful HTML.
 
-1. Edit the launch-package request.
-2. Preview the exact input set.
-3. Review reuse, rerun, waiting, reason, and estimated added cost.
-4. Execute the deterministic local path or see an honest blocked state.
-5. Inspect the resulting run or recover it later.
+The change state should keep the workflow identity in route context, show saved values beside editable values, offer human-readable controls, and make changed values visible. Nothing executes while the user edits.
 
-### Recovery
+The preview state should lead with the actual dependency sequence and the planner's decisions. Each decision must include its reason and distinguish reuse, rerun, pending dependency, and other supported states. Known additional cost, unknown cost, approval limits, prior cost, and actual cost must not be conflated.
 
-1. Open Continuity.
-2. Restore the project scope.
-3. See which outputs were recovered and whether each artifact is available.
-4. Return to Revisions with the recovered context intact.
+The execution state should be driven by backend state and show a chronological sequence. It may include provider, offering, job, chain, quote, and actual cost only when those values are real. Downstream signature reevaluation should be visible when an upstream execution finishes.
 
-## Brand direction
+The result state should show the resulting work, what was reused or newly executed, the previous output or revision reference when available, actual known cost, and safe next actions. It must never describe theoretical savings as actual savings.
 
-The Delta mark represents controlled change. Three sides form a stable system and one colored segment identifies the part that changes. The name is lowercase in the wordmark and sentence case in prose.
+History should be chronological and useful for selecting a prior run or result. It should show only the records the backend can support, including changed inputs, decisions, executions, costs, status, and timestamp. Recovery and reconciliation should show persisted Delta identity separately from current provider or chain evidence and should never offer an unsafe replacement for an ambiguous paid outcome.
 
-The public site feels like a kinetic execution system: precise, technical, high contrast, and visibly shaped by Delta's revision model. Deep graphite is the main field, cold white creates section contrast, orange marks changed or rerun work, cool violet marks unresolved dependencies, and muted neutral marks preserved work. Solid color, geometry, topology, and purposeful motion carry the identity. The rejected warm-paper editorial direction must not be recreated.
+## Visual direction
 
-### Marketing composition
+Do not lock Delta into a generated aesthetic, a fixed palette, a fixed font family, or a fixed shell. A future visual direction should be selected from the product's trust level, work artifacts, audience, and observed task performance.
 
-- Purpose: establish the category and make the mechanism understandable
-- Focal point: a completed three-step workflow with believable illustrative artifacts and a changed input entering the dependency topology
-- Layout gravity: concise promise beside a product visualization that is visible without scrolling on a typical desktop viewport
-- Typography: Manrope for strong technical hierarchy and DM Mono only for state, signatures, IDs, cost, and metadata
-- Palette: graphite and cold white fields, Delta orange for changed or rerun work, restrained violet for unresolved dependencies, and neutral green-gray for preserved work
-- Surfaces: compact technical planes, small radii, crisp borders, and connected paths. No paper shadows, glass, decorative gradients, or generic card grids
-- Motion: the Delta change signal travels through affected declared dependencies, then node states settle. Reduced motion exposes the same final state immediately.
-- Mobile: the workflow becomes a deliberate vertical dependency flow with full text state and early access to the primary action
+Durable visual principles:
 
-### Application composition
+- clear hierarchy and a calm operational tone
+- work artifacts have visual priority
+- revision states are unmistakable without relying on color alone
+- dependency relationships are understandable
+- operational UI is quieter than marketing UI
+- use open layouts, dividers, timelines, artifact surfaces, and tables where they clarify the work
+- use containers only when grouping has a semantic purpose
+- avoid endless card walls, generic metric dashboards, decorative AI styling, gradients used as decoration, and fake terminal aesthetics
 
-- Purpose: complete a revision quickly and inspect evidence when needed
-- Focal point: the revision result, not the navigation or storage provider
-- Layout gravity: compact sidebar, calm content header, task-specific main pane
-- Typography: moderate scale, clear labels, tabular values for cost and identifiers
-- Surfaces: low-radius panels used only for grouped controls or state
-- Motion: request loading, result transitions, and navigation drawer only
-- Mobile: each page becomes one deliberate task with a compact header and drawer
+### Rejected exploration 1: warm-paper editorial marketing
 
-## Content rules
+This direction used beige or paper surfaces, oversized serif treatment, and editorial framing. It is recorded as an exploration and is not a requirement for the product or application.
 
-- Lead with the user's work, change, cost, and next action.
-- Do not mention Sibyl on general product surfaces. Show it on Integrations or inside technical evidence.
-- Use `saved work`, `continuity`, and `recovery` in the normal interface.
-- Reveal project ID rules only while the field is focused or invalid.
-- Keep required markers quiet. Native validation and clear labels carry the main burden.
-- Never present fixture output as a live provider result.
-- Never invent customers, testimonials, uptime, savings, job counts, or security certification.
+### Rejected exploration 2: generic developer-tool application
 
-## Components and states
+This direction used a persistent dark sidebar, an admin or dashboard shell, repeated rounded panels, metric-card layouts, and tiny technical metadata everywhere. It is rejected as the default application structure.
 
-### Navigation
+A generic dark console or grid treatment was also explored for the public site. It must not become Delta's default visual identity.
 
-- Public navigation: Product, How it works, Integrations, Open workspace
-- Application navigation: Overview, Revisions, Runs, Continuity, Integrations, Back to site
-- Active application navigation reflects the current URL
-- Mobile navigation is a dialog-like drawer with focus return and Escape handling
+## Public site
 
-### Revision form
+The public site and application are separate surfaces with different jobs. The public site should explain the product quickly, demonstrate revision causality with tangible work, answer trust questions, and lead into the application. It should not be forced to share one exact hero composition, route, palette, or layout with the application.
 
-- Required labels stay visible
-- Helper text appears on focus where it is only formatting guidance
-- Preview is the dominant action
-- Execution stays disabled until the exact inputs have a current preview
-- Editing any field invalidates the preview immediately
+The current artifact-canvas landing exploration is a documented experiment, not a permanent requirement. Future landing changes must preserve truthful claims, clear calls to action, and the distinction between illustrative examples and live execution.
 
-### Workflow map
+## Content and trust rules
 
-- Marketing mode is labelled `Illustrative preview`
-- Application mode is derived from API state
-- State always includes text and shape, not color alone
-- Motion explains signal direction and state change
+- Lead with the user's work, the change, the cost boundary, and the next action.
+- Keep implementation names and persistence details in context, such as evidence or integration detail, rather than repeating them on every screen.
+- Use direct labels for states: reuse, rerun, pending, executing, reconciling, completed, failed, blocked, unavailable, and ambiguous.
+- Keep required markers quiet and reveal formatting guidance when it is useful.
+- Never invent customers, testimonials, uptime, savings, job counts, transaction confirmation, or security certification.
+- Treat provider deliverables and metadata as untrusted data. Escape dynamic content and do not render untrusted HTML.
 
-### Feedback
+## Verification requirements
 
-- Buttons keep a stable width while loading
-- Busy operations set `aria-busy` and prevent duplicate activation
-- Errors explain the next action and move focus to the summary
-- Unknown cost remains `Unknown`
-- Unavailable provider or chain state remains `Not connected` or `Unavailable`
+Interface work is not complete because templates exist. Verify the complete path from user input through the UI, API handler, Delta engine, adapter or deterministic service, persistence, returned result, and UI representation.
 
-## Delivery plan
+For each meaningful release, exercise positive and negative cases, including unchanged input, changed launch date, changed visual brief, shared description change, stale preview, failed execution, unavailable artifact, recovery after a fresh process, project isolation, and ambiguous paid work. Inspect every major application route at 1440, 1024, 768, and 390 CSS pixel widths. Check purpose, primary action, overflow, focus order, keyboard operation, readable state language, reduced motion, and honest loading or failure behavior.
 
-### 1. Product structure
+## Research history
 
-Create the public route, five application routes, shared application shell, and route tests.
+The following references informed structural questions only. They are inspiration and research history, not implementation requirements or brand direction:
 
-### 2. Public story
+- Relevance AI Workforce, connected workflow topology: https://relevanceai.com/workforce
+- Lindy, tangible work artifacts and persistent product access: https://www.lindy.ai/
+- Browser Use, direct product framing and dense technical storytelling: https://browser-use.com/
+- Inngest, durable execution states and code-to-record storytelling: https://www.inngest.com/
+- Radix accessibility guidance for focus and keyboard behavior: https://www.radix-ui.com/primitives/docs/overview/accessibility
+- Component Gallery and Web Interface Guidelines, interface anatomy and interaction review: https://component.gallery/ and https://interfaces.rauno.me/
 
-Build the landing page and an interactive, clearly illustrative revision map. Add working calls to action to the revision workspace.
+## Document ownership
 
-### 3. Core workspace
+`DESIGN.md` owns durable interaction and visual principles.
 
-Move the existing preview and execution path into Revisions. Keep the server, CSRF, validation, persistence, and stale-plan checks unchanged.
+`MASTER_PLAN.md` owns stable product and technical architecture.
 
-### 4. Operational pages
+`IMPLEMENTATION_PLAN.md` owns build order and acceptance gates.
 
-Build Overview, Runs, Continuity, and Integrations from current API state. Do not add dead controls or imply unavailable backend behavior.
+`STATE.md` owns current verified implementation status.
 
-### 5. Interaction and accessibility
-
-Add route-aware navigation, mobile drawer behavior, progressive field help, loading states, focus management, reduced motion, and responsive layouts.
-
-### 6. Verification
-
-Exercise landing calls to action, every application route, preview, execute, changed input, recovery, error, empty, loading, and unavailable states. Inspect at 390, 768, 1024, and 1440 CSS pixels. Run the full suite.
-
-## Research basis
-
-Checked on 2026-09-03:
-
-- Relevance AI Workforce brings the visual canvas and connected agent topology close to the main promise. Delta uses this structural lesson to show its real three-step dependency model immediately: https://relevanceai.com/workforce
-- Lindy makes concrete product artifacts carry the story and keeps primary product access persistent in navigation. Delta uses compact visual, announcement, and translation artifacts instead of abstract agent artwork: https://www.lindy.ai/
-- Browser Use leads with an unusually direct product statement and keeps technical product concepts visually dense. Delta applies that directness while retaining its own execution-record language: https://browser-use.com/
-- Inngest explains developer infrastructure through durable execution states and code-to-record storytelling. Delta uses a compact workflow definition paired with its resulting work record: https://www.inngest.com/
-- Radix documents accessible focus, keyboard, and state behavior: https://www.radix-ui.com/primitives/docs/overview/accessibility
-- Component Gallery and Web Interface Guidelines informed component anatomy and interaction review: https://component.gallery/ and https://interfaces.rauno.me/
-
-These references provide structural evidence only. Delta does not copy their branding, claims, code, or interface.
-
-### Landing redesign implementation note
-
-Useful structural ideas are: put the behavior above the fold, use the topology itself as the hero artifact, let motion show causality, place real-looking but clearly illustrative output inside nodes, alternate dense dark execution fields with cold-white explanatory fields, simplify the topology into a vertical flow on mobile, and keep navigation actions literal. Delta's identity remains its controlled change signal, explicit reuse/rerun/pending decisions, paid-job reconciliation, and inspectable work record.
-
-### Hero exploration record, 2026-09-03
-
-Three spatial directions were considered before implementation:
-
-- Artifact canvas: a completed launch package arranged on overlapping planes, with the changed input entering the composition.
-- Before and revision: preserved, updated, and waiting artifacts compared as layered states.
-- Production line: three tangible outputs moving through a linear revision boundary.
-
-The artifact canvas won because it communicates Delta within five seconds, keeps all completed work perceptible, and gives the change a physical path without turning the hero into a schematic node graph. The chosen hero uses an original local product-campaign image at `delta/static/solar-charger-campaign.png`, generated specifically as a fictional launch-package visual with no logos, text, or external imagery. The announcement and translation are designed document artifacts and are labelled illustrative in the scene.
+Temporary route structures, page compositions, palettes, typography choices, and component decisions must not become permanent requirements merely because they exist in the current implementation.
