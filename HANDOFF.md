@@ -2,7 +2,7 @@
 
 ## Current position
 
-Phase 2 of the trusted-handoff migration is implemented in the shared worktree and has passed its exit gate. It is intentionally uncommitted for this local handoff. Verified commands and results are recorded in `STATE.md` under "Phase 2 verified results (2026-09-04)".
+Phase 2 of the trusted-handoff migration is implemented and has passed its exit gate. The checkpoint is committed as `74ffd0e` on `main`. Verified commands and results are recorded in `STATE.md` under "Phase 2 verified results (2026-09-04)".
 
 What exists now:
 
