@@ -12,7 +12,14 @@ Last updated: 2026-09-04 (Phase 4 handoff-first UX and landing redesign verified
 - The existing backend remains intact: explicit workflows, signatures, freshness, Sibyl persistence, attempts, blocked and pending states, artifact checks, ACP reconciliation, spending controls, and Base evidence handling.
 - The current non-spending baseline is 141 passing tests, verified on 2026-09-04 after Phase 4. The pre-Phase-1 baseline was 74 tests.
 - Existing live ACP limitations remain unchanged. Delta still does not prove paid execution through settlement and verified artifact finalization into a reusable `WorkResult`, followed by fresh-process recall and authorized Agent B inheritance.
-- The next implementation task is Phase 5: operator-gated live ACP/Base proof and submission hardening. Phases 1 through 4 have passed their local exit gates; external model execution and the live paid path remain unverified.
+- Phase 5 is currently blocked at its required live boundary. Phases 1 through 4 have passed their local exit gates; external model execution and the live paid path remain unverified.
+
+## Phase 5 status (2026-09-04)
+
+- The existing operator scope still has ACP job `75773` persisted as `active` on Base `8453`, with provider `0xb0aca700745a989a1cb859eecfe0fd9afbc066aa` and no funding or settlement. `.venv/bin/python scripts/live_acp_validation.py status` confirmed this without a network or spending action.
+- `scripts/live_acp_validation.py` now has a read-only `reconcile` action. It reads provider history, persists the observation into the existing attempt, and explicitly refuses replacement or payment. It has not been run because this environment has no approved live provider session.
+- Phase 5 cannot run its required create, fund, completion, settlement, artifact, and reusable-work proof without explicit approval naming the Base chain, provider and offering, allowed step, transaction actions, maximum service spend, and approval expiry. No live action, wallet operation, ACP payment, Base transaction, or external model request was made in this phase.
+- Until that approval and a safe provider-history reconciliation are available, public claims remain limited to the locally verified deterministic fixture path and recorded external evidence. The known open attempt must be reconciled before any replacement is considered.
 
 ## Phase 4 verified results (2026-09-04)
 

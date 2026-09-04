@@ -2,7 +2,7 @@
 
 ## Current position
 
-Phase 4 of the trusted-handoff migration is implemented and locally verified. The Phase 1 and 2 checkpoint is `74ffd0e`, followed by the Phase 3 checkpoint and the current Phase 4 work. Verified commands and results are recorded in `STATE.md` under the Phase 2, Phase 3, and Phase 4 sections.
+Phase 4 of the trusted-handoff migration is implemented and locally verified. Phase 5 hardening is present but blocked at the required live boundary. The Phase 1 and 2 checkpoint is `74ffd0e`, followed by the Phase 3 checkpoint and the Phase 4 checkpoint. Verified commands and results are recorded in `STATE.md`.
 
 What exists now:
 
@@ -16,19 +16,23 @@ What exists now:
 - `delta/templates/scenario-list.html` and `delta/templates/scenario-detail.html` provide the handoff-first application journey. `delta/static/scenario.css` and `delta/static/scenario.js` provide the responsive, accessible scenario interface.
 - The landing page now leads with the Agent A to Delta to Agent B boundary and the Reuse Receipt. Legacy launch-package routes remain available but are no longer the primary product path.
 - `.venv/bin/python -m pytest -rA` returned `141 passed, 19 subtests passed`.
+- `scripts/live_acp_validation.py status` confirmed the known ACP job `75773` remains `active`, open, and unfunded on Base `8453`.
+- `scripts/live_acp_validation.py reconcile` is now available as a read-only provider-history reconciliation path. It must run successfully before a replacement is considered.
 - `.venv/bin/python scripts/phase2_mutation_review.py` caught all 8 Phase 2 guard-removal mutations.
 
 What remains unverified: an external OpenAI call and live ACP/Base action for the new handoff path. No external model call was made because credentials and API-spend approval were not available. Phase 5 owns live proof and submission hardening.
 
-## Next task: Phase 5
+## Next task: unblock Phase 5
 
-Implement Phase 5 from `IMPLEMENTATION_PLAN.md` only:
+Continue Phase 5 from `IMPLEMENTATION_PLAN.md` only after the live preconditions are satisfied:
 
 - operator-gated live ACP/Base proof and submission hardening
 - preserve the Phase 4 scenario journey and no-spend public boundary
 - reconcile any known or ambiguous ACP attempt before considering a replacement
+- refresh the provider and offering through read-only discovery
+- obtain explicit approval for Base `8453`, the selected provider and offering, the allowed step, transaction actions, service cap, and expiry
 
-Do not claim live provider, payment, settlement, or reusable-work success until the Phase 5 exit gate passes.
+Do not claim live provider, payment, settlement, or reusable-work success until the Phase 5 exit gate passes. The public demo remains no-spend.
 
 ## Phase 2 proof and boundaries
 

@@ -17,7 +17,7 @@ revision demonstration while it is migrated through
 
 ## Status
 
-**Current status: Phases 1 through 4 of the trusted-handoff roadmap are implemented and locally verified. The scenario-first handoff surface is primary; the existing launch-package surface remains legacy. Phase 5 is next.**
+**Current status: Phases 1 through 4 of the trusted-handoff roadmap are implemented and locally verified. The scenario-first handoff surface is primary; the existing launch-package surface remains legacy. Phase 5 live proof is blocked pending explicit operator approval and reconciliation of the known open ACP attempt.**
 
 ### Current capabilities
 

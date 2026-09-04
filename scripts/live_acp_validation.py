@@ -136,7 +136,7 @@ def budget_from_history(payload: dict[str, Any]) -> str | None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the approved Aaga ACP validation in phases.")
-    parser.add_argument("action", choices=("create", "message", "fund", "complete", "status"))
+    parser.add_argument("action", choices=("create", "message", "fund", "complete", "reconcile", "status"))
     parser.add_argument("--approve", action="store_true", help="confirm the exact approved Aaga validation scope")
     parser.add_argument("--amount", help="exact provider budget amount returned by ACP")
     parser.add_argument("--job-id", help="job identity when it is not yet persisted")
@@ -154,6 +154,32 @@ def main() -> int:
                     "provider_chain_id": attempt.provider_chain_id if attempt else None,
                     "provider_id": attempt.provider_id if attempt else None,
                     "offering_id": attempt.offering_id if attempt else None,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    if args.action == "reconcile":
+        attempt = store.get_attempt(ATTEMPT_ID)
+        if attempt is None or not attempt.provider_job_id:
+            raise SystemExit("No persisted ACP job identity is available for reconciliation.")
+        record = adapter.reconcile_attempt(STEP_ID)
+        print(
+            json.dumps(
+                {
+                    "attempt_id": ATTEMPT_ID,
+                    "job_id": record.job_id,
+                    "chain_id": record.chain_id,
+                    "provider_id": record.provider_id,
+                    "offering_id": record.offering_id,
+                    "offering_name": record.offering_name,
+                    "provider_status": record.provider_status,
+                    "delta_state": record.delta_state,
+                    "fixture": record.fixture,
+                    "transaction_hashes": list(record.transaction_hashes),
+                    "deliverable_present": record.deliverable is not None,
+                    "message": "Read-only provider history was reconciled into the persisted attempt. No replacement or payment was attempted.",
                 },
                 sort_keys=True,
             )
