@@ -211,6 +211,133 @@ def step_output(step_id: str) -> StepOutputRef:
     return StepOutputRef(step_id)
 
 
+class ExternalExposure(str, Enum):
+    """Developer-declared sensitivity of a work item's content.
+
+    ``INTERNAL_ONLY`` work must never be inherited by an agent that can expose
+    it outside the originating trust boundary. ``SHAREABLE`` work is declared
+    safe for an externally facing recipient. Delta never infers this value.
+    """
+
+    INTERNAL_ONLY = "internal_only"
+    SHAREABLE = "shareable"
+
+
+class ExternalJobSettlement(str, Enum):
+    """Settlement state of an external paid job attached to completed work."""
+
+    SETTLED = "settled"
+    RECONCILIATION_REQUIRED = "reconciliation_required"
+    UNSETTLED = "unsettled"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class WorkDeclaration:
+    """Developer-declared handoff metadata for a step.
+
+    Work category and external exposure are configuration, not inference. An
+    LLM never supplies these values, and a step without a declaration produces
+    work that carries no handoff provenance.
+    """
+
+    work_category: str
+    external_exposure: ExternalExposure = ExternalExposure.INTERNAL_ONLY
+
+    def __post_init__(self) -> None:
+        _identifier(self.work_category, "work_category")
+        if not isinstance(self.external_exposure, ExternalExposure):
+            raise DeltaValidationError("external_exposure must be an ExternalExposure")
+
+
+@dataclass(frozen=True)
+class AgentPrincipal:
+    """Stable identity of an agent taking part in a handoff.
+
+    ``provider_id`` is the agent's runtime or model provider identity. It is
+    deliberately distinct from an external service provider identity such as an
+    ACP marketplace provider.
+    """
+
+    agent_id: str
+    session_id: str
+    provider_id: str
+
+    def __post_init__(self) -> None:
+        _identifier(self.agent_id, "agent_id")
+        _identifier(self.session_id, "session_id")
+        _identifier(self.provider_id, "provider_id")
+
+
+@dataclass(frozen=True)
+class ExternalJobRef:
+    """Safe reference metadata for an external paid job, never its payload."""
+
+    provider_id: str
+    job_id: str
+    chain_id: int
+    settlement_state: ExternalJobSettlement = ExternalJobSettlement.UNKNOWN
+    transaction_hash: str | None = None
+
+    def __post_init__(self) -> None:
+        _identifier(self.provider_id, "external job provider_id")
+        _identifier(self.job_id, "external job job_id")
+        if not isinstance(self.chain_id, int) or isinstance(self.chain_id, bool) or self.chain_id <= 0:
+            raise DeltaValidationError("external job chain_id must be a positive integer")
+        if not isinstance(self.settlement_state, ExternalJobSettlement):
+            raise DeltaValidationError("settlement_state must be an ExternalJobSettlement")
+        if self.transaction_hash is not None:
+            _identifier(self.transaction_hash, "external job transaction_hash")
+
+
+@dataclass(frozen=True)
+class WorkProvenance:
+    """Source agent, session, and declared handoff metadata for completed work."""
+
+    source_agent_id: str
+    source_session_id: str
+    source_provider_id: str
+    work_category: str
+    external_exposure: ExternalExposure = ExternalExposure.INTERNAL_ONLY
+    external_job: ExternalJobRef | None = None
+    recorded_at: datetime | None = None
+
+    def __post_init__(self) -> None:
+        _identifier(self.source_agent_id, "source_agent_id")
+        _identifier(self.source_session_id, "source_session_id")
+        _identifier(self.source_provider_id, "source_provider_id")
+        _identifier(self.work_category, "work_category")
+        if not isinstance(self.external_exposure, ExternalExposure):
+            raise DeltaValidationError("external_exposure must be an ExternalExposure")
+        if self.external_job is not None and not isinstance(self.external_job, ExternalJobRef):
+            raise DeltaValidationError("external_job must be an ExternalJobRef")
+        if self.recorded_at is not None and not isinstance(self.recorded_at, datetime):
+            raise DeltaValidationError("recorded_at must be a datetime")
+
+    @classmethod
+    def from_principal(
+        cls,
+        principal: "AgentPrincipal",
+        declaration: WorkDeclaration,
+        *,
+        external_job: ExternalJobRef | None = None,
+        recorded_at: datetime | None = None,
+    ) -> "WorkProvenance":
+        if not isinstance(principal, AgentPrincipal):
+            raise DeltaValidationError("provenance requires an AgentPrincipal")
+        if not isinstance(declaration, WorkDeclaration):
+            raise DeltaValidationError("provenance requires a WorkDeclaration")
+        return cls(
+            source_agent_id=principal.agent_id,
+            source_session_id=principal.session_id,
+            source_provider_id=principal.provider_id,
+            work_category=declaration.work_category,
+            external_exposure=declaration.external_exposure,
+            external_job=external_job,
+            recorded_at=recorded_at,
+        )
+
+
 @dataclass(frozen=True)
 class Step:
     id: str
@@ -219,6 +346,7 @@ class Step:
     freshness: FreshnessPolicy = field(default_factory=FreshnessPolicy)
     estimated_cost: CostEstimate | None = None
     executor: Any = None
+    declaration: WorkDeclaration | None = None
 
     def __post_init__(self) -> None:
         _identifier(self.id, "step id")
@@ -231,6 +359,8 @@ class Step:
             callable(self.executor) or callable(getattr(self.executor, "execute", None))
         ):
             raise DeltaValidationError("executor must be callable or expose execute()")
+        if self.declaration is not None and not isinstance(self.declaration, WorkDeclaration):
+            raise DeltaValidationError("step declaration must be a WorkDeclaration")
         object.__setattr__(self, "bind", dict(self.bind))
 
 
@@ -436,6 +566,7 @@ class WorkResult:
     successful_attempt_id: str | None = None
     artifact: ArtifactReference | None = None
     status: str = "completed"
+    provenance: WorkProvenance | None = None
 
     def __post_init__(self) -> None:
         _identifier(self.workflow_id, "workflow_id")
@@ -445,6 +576,8 @@ class WorkResult:
         _identifier(self.output_signature, "output_signature")
         if self.status != "completed":
             raise DeltaValidationError("WorkResult must represent completed work")
+        if self.provenance is not None and not isinstance(self.provenance, WorkProvenance):
+            raise DeltaValidationError("provenance must be a WorkProvenance")
         object.__setattr__(self, "output", normalize_json(self.output))
         if self.output_signature != output_signature(self.output):
             raise DeltaValidationError("output_signature does not match output")

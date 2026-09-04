@@ -47,7 +47,8 @@ class WebClient:
         for key, value in captured["headers"]:
             if key.lower() == "set-cookie":
                 self.cookie = value.split(";", 1)[0]
-                self.csrf = self.cookie.split("=", 1)[1]
+            if key.lower() == "x-delta-csrf":
+                self.csrf = value
         return captured["status"], response_body, dict(captured["headers"])
 
     def json(self, path: str, method: str = "GET", payload: dict | None = None):
@@ -61,6 +62,7 @@ class PhaseFiveWebTests(unittest.TestCase):
         self.tempdir = tempfile.TemporaryDirectory(prefix="delta-phase5-web-")
         self.app = DeltaWebApp(memory_path=Path(self.tempdir.name) / "memory.db")
         self.client = WebClient(self.app)
+        self.client.json("/api/login", "POST", {"email": "demo@delta.local", "password": "delta-demo"})
         self.payload = {
             "project_id": "web-project-a",
             "description": "A compact solar charger for remote workdays",
@@ -144,9 +146,12 @@ class PhaseFiveWebTests(unittest.TestCase):
             self.assertNotIn("{{", document)
 
     def test_state_changes_require_csrf_and_valid_inputs(self) -> None:
+        saved_csrf = self.client.csrf
+        self.client.csrf = ""
         status, response, _ = self.client.json("/api/preview", "POST", self.payload)
         self.assertEqual(status, "422 Unprocessable Entity")
         self.assertIn("CSRF", response["message"])
+        self.client.csrf = saved_csrf
         self.client.request("/")
         invalid = dict(self.payload, project_id="../other-project")
         status, response, _ = self.client.json("/api/preview", "POST", invalid)
@@ -222,8 +227,9 @@ plan = DeltaEngine(store).preview(request)
 payload = DeltaWebApp(memory_path=memory_path)._state_payload(store, request, plan, status="loaded")
 print(json.dumps(payload))
 """
+        session = self.app.sessions.decode(self.client.cookie.split("=", 1)[1])
         child = subprocess.run(
-            [sys.executable, "-c", script, str(self.app.memory_path), self.payload["project_id"]],
+            [sys.executable, "-c", script, str(self.app.memory_path), session.workspace_id],
             cwd=Path(__file__).resolve().parents[1],
             check=True,
             capture_output=True,

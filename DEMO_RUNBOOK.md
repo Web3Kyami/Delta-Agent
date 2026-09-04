@@ -1,12 +1,12 @@
 # Delta Demo Runbook
 
-> **Migration notice:** The launch-package paths in this runbook document the currently implemented legacy demo and historical integration evidence. They are not the approved product direction or the final judge story. The trusted-handoff runbook will replace them during Phases 2 through 5 of `IMPLEMENTATION_PLAN.md`. Until then, do not present the legacy flow as the new Agent A to Agent B handoff product.
+> **Migration notice:** The launch-package paths in this runbook document the currently implemented legacy demo and historical integration evidence. They are not the approved product direction or the final judge story. Phase 2 handoff scenarios are now available at `/app/scenarios`; the legacy flow remains separate until later migration phases.
 
 ## Purpose
 
 This runbook defines the reproducible judge path and the evidence needed to support Delta's claims. It must never instruct the presenter to fake completion, cost, provider state, or partner integration.
 
-The approved future judge path uses AI software-work handoff as the primary scenario, Home repair handoff for a general audience, and Paid research handoff for ACP/Base evidence. It must prove that blocked work stays outside Agent B's context and that the Reuse Receipt reflects persisted gate decisions. None of that new behavior is implemented yet.
+The approved judge path uses AI software-work handoff as the primary scenario, Home repair handoff for a general audience, and Paid research handoff for ACP/Base evidence. Phase 2 proves isolated deterministic fixture state, reset semantics, and the pre-prompt gate. LLM execution and live settlement remain later phases.
 
 The hackathon demo is limited to 2 to 5 minutes, so full live provider execution may need to be prepared in advance while still showing a genuine fresh-session recall and genuine integration evidence.
 

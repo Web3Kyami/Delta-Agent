@@ -9,26 +9,32 @@ Delta's approved direction is a trusted handoff layer for agent work:
 
 Agent A completes work and Sibyl persists it. When Agent B begins later, Delta will recall candidate work and deterministically evaluate validity, trust, authorization, dependencies, and external-job safety before constructing Agent B's context. Approved work may cross the handoff. Blocked work must stay outside the receiving model's prompt. Missing work executes, and a Reuse Receipt explains the outcome.
 
-This trusted-handoff functionality is approved but not implemented yet. The current repository contains the reusable backend machinery and a legacy launch-package revision demonstration that will be migrated through `IMPLEMENTATION_PLAN.md`.
+The trusted-handoff migration is underway. Phase 1 and Phase 2 are implemented and
+verified in the shared worktree; the remaining LLM, product-interface, and live
+settlement phases are still planned. The repository also retains the legacy
+launch-package revision demonstration while it is migrated through
+`IMPLEMENTATION_PLAN.md`.
 
 ## Status
 
-**Current status: the trusted-handoff roadmap is approved and implementation has not begun. The existing backend remains verified, while the current launch-package product surface is legacy. The next task is Phase 1 of the new roadmap only.**
+**Current status: Phases 1 and 2 of the trusted-handoff roadmap are implemented and verified. The existing launch-package surface remains legacy. The next task is Phase 3, approved-context LLM execution and Reuse Receipts.**
 
 ### Current capabilities
 
 Implemented and verified:
 
 - **Phase 1**: core engine, input/output signatures, dependency validation
-- **Phase 2**: Sibyl Memory persistence (entities + journal + artifact references)
-- **Phase 3**: deterministic execution engine, attempt lifecycle, blocked/failure states
-- **Phase 4**: no-spend Virtuals ACP adapter (read-only history, JSON CLI, reconciliation)
+- **Migration Phase 1**: trusted-handoff contracts and deterministic policy gate
+- **Migration Phase 2**: signed demo identity, isolated workspaces and scenarios, scoped reset
+- **Legacy Phase 2**: Sibyl Memory persistence (entities + journal + artifact references)
+- **Legacy Phase 3**: deterministic execution engine, attempt lifecycle, blocked/failure states
+- **Legacy Phase 4**: no-spend Virtuals ACP adapter (read-only history, JSON CLI, reconciliation)
 - **Legacy Phase 5**: public product site and route-based local launch-package workspace (`run_demo.py` at `http://127.0.0.1:8000`)
 - **Phase 6**: LangGraph comparison baseline (overlap measured, not claimed novel)
 - **Phase 7**: live Aaga ACP history and Base transaction evidence, with the paid execution-to-reusable-work gap documented rather than claimed as complete.
 
-The Python test suite baseline is **74 passing tests**, verified on 2026-09-04. See
-`STATE.md` for verified facts, onchain evidence, and the next action.
+The current non-spending Python test suite is **128 passing tests**, verified on
+2026-09-04. See `STATE.md` for verified facts, onchain evidence, and the next action.
 
 ### Approved migration direction
 

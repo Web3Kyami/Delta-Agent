@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign in | Delta</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="login-page">
+  <main class="login-card" aria-labelledby="login-title">
+    <p class="eyebrow">Guided demo access</p>
+    <h1 id="login-title">Enter Delta</h1>
+    <p>Use the supplied demo account to explore an isolated agent-work handoff. This account cannot spend funds.</p>
+    <div class="demo-credentials" aria-label="Demo credentials">
+      <div><span>Email</span><code>demo@delta.local</code></div>
+      <div><span>Password</span><code>delta-demo</code></div>
+    </div>
+    <form method="post" action="/api/login" id="login-form">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="username" value="demo@delta.local" required>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button class="button button-primary" type="submit">Sign in</button>
+    </form>
+    <p class="login-note">Public demo credentials are separate from operator approval for ACP and Base actions.</p>
+  </main>
+</body>
+</html>

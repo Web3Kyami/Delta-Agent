@@ -1,18 +1,159 @@
 # Delta State
 
-Last updated: 2026-09-04 (trusted-handoff direction approved)
+Last updated: 2026-09-04 (Phase 2 demo identity, isolation, scenarios, and reset verified)
 
 ## Current direction
 
 - Delta is now defined as a trusted handoff layer for agent work: agents can inherit previous work without inheriting everything.
 - The approved flow is Agent A completion, Sibyl persistence, Agent A session end, later Agent B session, deterministic validity/trust/authorization/dependency/external-job gating, approved-context construction, missing-work execution, and a Reuse Receipt.
 - The previous launch-package and revision-centric product surface is legacy implementation history and will be retired through the new five-phase roadmap in `IMPLEMENTATION_PLAN.md`.
-- No trusted-handoff product functionality has been implemented yet. Existing code remains the pre-migration backend and launch-package demonstration.
+- Phase 1 of the migration is implemented and verified. `delta/handoff.py` owns agent/session provenance evaluation, a minimal inheritance policy, candidate discovery, five separate verdicts, the deterministic pre-prompt gate, `ApprovedContext`, `HandoffRecord`, and `ReuseReceipt`.
+- Phase 2 is implemented and verified in the shared worktree, but is not committed per the handoff request. It adds signed demo sessions, server-controlled composite scopes, three isolated scenarios, first-open Sibyl initialization, scoped reset, stale-generation checks, and public no-spend boundaries. Phases 3 to 5 are not implemented.
 - The existing backend remains intact: explicit workflows, signatures, freshness, Sibyl persistence, attempts, blocked and pending states, artifact checks, ACP reconciliation, spending controls, and Base evidence handling.
-- The current non-spending baseline is 74 passing tests, verified on 2026-09-04.
+- The current non-spending baseline is 128 passing tests, verified on 2026-09-04 after Phase 2. The pre-Phase-1 baseline was 74 tests.
 - Existing live ACP limitations remain unchanged. Delta still does not prove paid execution through settlement and verified artifact finalization into a reusable `WorkResult`, followed by fresh-process recall and authorized Agent B inheritance.
-- The next implementation task is Phase 1 only: handoff contracts and the deterministic pre-prompt policy gate. Phase 2 must not begin until Phase 1 passes its exit gate.
-- Do not claim that agent handoff, inheritance authorization, approved-context LLM execution, Reuse Receipts, public login, isolated demo workspaces, scenario reset, or the new scenarios already exist.
+- The next implementation task is Phase 3: agent sessions, approved-context LLM execution, and Reuse Receipts. Phases 1 and 2 have passed their exit gates.
+
+## Phase 2 verified results (2026-09-04)
+
+- `.venv/bin/python -m pytest -q` returned `128 passed`.
+- `.venv/bin/python scripts/phase2_mutation_review.py` caught all 8 Phase 2 guard-removal mutations.
+- `git diff --check` passed.
+- Login, failed login, signed session cookies, Delta Dave identity, sign out path, and per-session CSRF are covered by `tests/test_phase2_web.py` and the updated legacy web tests.
+- Workspace, scenario, and generation isolation use the existing two-axis `Scope` by encoding a short workspace digest, scenario ID, and generation into `project_id`. No application database was added.
+- The three scenarios share one engine shape and are clearly labelled deterministic fixture services: AI software-work handoff, Home repair handoff, and Paid research handoff.
+- Reset hard-deletes exact-scope work, attempt, plan, handoff, and receipt entities through Sibyl's verified `delete_entity` API, clears HOT heads by overwrite, issues a new generation, and retains append-only journal history. The response states these semantics explicitly.
+- Concurrent reset requests are serialized by the documented in-process reset lock; the focused test observes one deletion pass and one stale-generation rejection.
+- Retired generations leave a Sibyl HOT tombstone, so an old signed cookie cannot reopen or reset the deleted generation.
+- A handoff request returns reuse, blocked, rerun, and pending-dependency decisions. Private and private-derived outputs are withheld from browser-visible scenario and handoff payloads; the canary is absent from approved context and receipt data.
+- Public sessions receive a blocked response for live approval actions. No ACP job, wallet action, settlement, or Base transaction was run.
+- Do not claim that approved-context LLM execution exists yet. Public login, isolated demo workspaces, scenario reset, and the three scenario surfaces are now verified Phase 2 behavior. Agent handoff, inheritance authorization, and Reuse Receipts remain verified engine contracts; the LLM surface is still Phase 3.
+
+## Phase 1 verified results (2026-09-04)
+
+Phase 1 goal: establish the trusted-handoff model and deterministic pre-prompt
+gate while leaving the current UI and live adapters unchanged.
+
+What was implemented:
+
+- `delta/core.py` adds `AgentPrincipal` (agent, session, runtime provider),
+  `WorkDeclaration` (developer-declared work category and external exposure),
+  `WorkProvenance`, `ExternalJobRef`, `ExternalExposure`,
+  `ExternalJobSettlement`, an optional `Step.declaration`, and an optional
+  `WorkResult.provenance`.
+- `delta/handoff.py` (new) adds `InheritancePolicy`, `PolicySet`,
+  `ProviderRule`, `ExternalExposureRule`, the five verdict enums, `Verdict`,
+  `HandoffVerdicts`, `WorkEvidence`, `HandoffDecision`, `HandoffCandidate`,
+  `ApprovedWorkItem`, `BlockedWorkNotice`, `ApprovedContext`, `HandoffRecord`,
+  `ReuseReceiptEntry`, `ReuseReceipt`, `HandoffRequest`, `HandoffEvaluation`,
+  and `HandoffGate`.
+- `delta/store.py` persists and reloads provenance on work results, adds
+  versioned `delta.handoff_record.v1` and `delta.reuse_receipt.v1` categories,
+  and refuses to persist a work output body inside a handoff record or receipt.
+  `list_work_records` reports records that fail to decode instead of dropping
+  them.
+- `delta/execute.py` accepts an optional `AgentPrincipal` and attaches source
+  provenance to new completed work when the step carries a declaration.
+
+Verification commands and results:
+
+- `.venv/bin/python -m pytest` → `115 passed, 19 subtests passed`. The
+  pre-Phase-1 baseline of 74 tests still passes unchanged.
+- `.venv/bin/python -m pytest tests/test_phase1_handoff.py` → 40 tests pass
+  against the real `SibylStore.local` client, not a mock.
+- `.venv/bin/python -m pytest tests/test_phase1_handoff_exit_gate.py` → the
+  exit gate passes. Process A (pid distinct, agent `agent-a-implementer`,
+  session `session-a-1`) persisted four work results and exited. Process B
+  (agent `agent-b-successor`, session `session-b-1`) recalled all four
+  candidates and produced `inventory: reuse`, `repair_scope: reuse`,
+  `private_note: blocked` with reason `BLOCKED_EXTERNAL_EXPOSURE_BLOCKED`, and
+  `insurer_summary: pending_dependency`. Counts were
+  `{reuse: 2, blocked: 1, pending_dependency: 1, rerun: 0}`.
+- Blocked-content exclusion is proven by a canary string that exists only
+  inside internal-only work output. Process B confirmed
+  `canary_reachable_in_store: true` (the content is genuinely there) and
+  `canary_in_agent_b_surface: false` plus `canary_in_reloaded_records: false`
+  across the prompt payload, inherited outputs, handoff record, receipt
+  entries, receipt summary, and the records reloaded from Sibyl.
+- `.venv/bin/python scripts/phase1_mutation_review.py` → `all 24 mutations were
+  caught by the test suite`. Each mutation removes one guard in
+  `delta/handoff.py`, `delta/store.py`, `delta/core.py`, or `delta/execute.py`
+  and confirms a named test fails.
+
+Independent verdicts confirmed by test:
+
+- Validity and authorization are independent. The blocked `private_note` item
+  reports `validity: valid`, `trust: trusted`, `authorization: unauthorized`.
+- A stale item reports `validity: invalid` with `authorization: authorized` and
+  produces `rerun`, not `blocked`.
+- Legacy work with no provenance is never automatically authorized. It reports
+  `trust: untrusted` with reason `BLOCKED_PROVENANCE_MISSING`, and a persisted
+  record whose `provenance` field is absent decodes to the same verdict.
+- Project boundaries prevent cross-project reuse. A second project scope over
+  the same database sees no candidates and inherits nothing.
+
+Known limitations after Phase 1:
+
+- The gate has no UI, LLM, or live-provider surface. Nothing in
+  `delta/web.py` or `delta/demo.py` was changed.
+- `ExternalJobRef` settlement state is consumed as recorded evidence. Phase 5
+  still owns proving a live paid path end to end.
+- Legacy `WorkResult` records remain unauthorized for inheritance by design; no
+  migration grants them provenance.
+
+## What is left of Phase 1
+
+Phase 1 passed its exit gate. These items are genuinely still open and are
+carried into later phases rather than silently closed:
+
+1. **No independent verification.** Every number in this section was produced by
+   the implementer. The verifier subagent dispatched on 2026-09-04 to *disprove*
+   completion failed at dispatch with an authentication error and returned no
+   verdict. `scripts/phase1_mutation_review.py` is the strongest substitute
+   available because it attacks the tests rather than confirming them, but it is
+   also the implementer's own harness. An outside review of `delta/handoff.py`
+   remains open.
+2. **Nothing is committed.** Four modified files and five new files are unstaged
+   on `main` above parent commit `e6fa335`. The unrelated stash
+   `wip/interrupted-app-ui-2026-09-03` is untouched.
+3. **No hands-on path exists.** `delta/web.py`, `delta/demo.py`, and
+   `delta/cli.py` contain no reference to `HandoffGate`, `ApprovedContext`, or
+   `ReuseReceipt`. Phase 1 correctness is proven by tests only. The first
+   human-operable proof arrives at the end of Phase 2.
+4. **"Only approved context reaches prompt construction" is enforced at the type
+   boundary, not at a real prompt.** `ApprovedContext` refuses unapproved
+   decisions, mismatched decisions, and content smuggled under an approved
+   decision, but no prompt builder consumes it yet. Phase 3 closes this.
+5. **External-job settlement is recorded evidence, not live proof.**
+   `ExternalJobRef` gates on settlement state that was written by a previous
+   recorded run. Phase 5 owns proving a live paid path.
+6. **Legacy records stay permanently unauthorized.** Any pre-Phase-1
+   `WorkResult` has no provenance and therefore resolves to
+   `BLOCKED_PROVENANCE_MISSING` forever unless re-executed under an
+   `AgentPrincipal`. This is deliberate, not a defect, and there is no migration.
+
+## Verified Sibyl reset behavior (2026-09-04)
+
+This resolves the open Phase 2 decision. Checked against the installed
+`sibyl_memory_client` at
+`.venv/lib/python3.12/site-packages/sibyl_memory_client/`, not assumed:
+
+- `delete_entity(category, name) -> bool` is a real hard `DELETE` against the
+  `entities` table, scoped by tenant, category, and exact name. It returns
+  `True` when a row was removed and `False` for a name that does not exist.
+  Scoped deletion is genuinely supported, so Phase 2 reset uses it.
+- There is no prefix, wildcard, or bulk delete. Deletion is one exact name per
+  call. This is why the plan's project-scoped reset manifest is required rather
+  than optional: reset must enumerate the names it intends to remove.
+- `archive_entity(category, name, reason)` returns `{archived_id, original_id}`
+  and makes the record unreachable through the entity API. After archiving,
+  `get_entity` raises `NotFoundError`, `list_entities()` omits it, and
+  `list_entities(status='archived')` returns an empty list. Archive is not a
+  readable soft-delete, so it must not be described as recoverable state.
+- A normal entity has `status = None`, not `'active'`. Therefore
+  `list_entities(status='active')` returns nothing at all. Any Phase 2 code that
+  filters live records by `status='active'` would silently see an empty
+  workspace. Filter by name scope, never by that status value.
 
 ## Approved scenario and rollout decisions
 

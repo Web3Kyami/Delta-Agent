@@ -14,6 +14,7 @@
   const navOverlay = document.querySelector("#nav-overlay");
   const continuityRestore = document.querySelector("#continuity-restore");
   const initializeDemoButton = document.querySelector("#initialize-demo-button");
+  const signOutButton = document.querySelector("#sign-out");
   const currentView = document.body.dataset.view;
   const initialInputValues = form ? Object.fromEntries(new FormData(form).entries()) : {};
   let latestPlanId = null;
@@ -392,6 +393,17 @@
     }
   });
 
+  if (signOutButton) signOutButton.addEventListener("click", async () => {
+    signOutButton.disabled = true;
+    try {
+      await request("/api/logout", { method: "POST", headers: { "X-CSRF-Token": getCsrfToken() } });
+      window.location.assign("/login");
+    } catch (error) {
+      showError(error.message);
+      signOutButton.disabled = false;
+    }
+  });
+
   executeButton.addEventListener("click", async () => {
     if (!latestPlanId || !validateClient()) return;
     setBusy(executeButton, true, "Executing...");
@@ -437,6 +449,8 @@
   }
 
   function getCsrfToken() {
+    const meta = document.querySelector('meta[name="delta-csrf-token"]');
+    if (meta && meta.content) return meta.content;
     const cookie = document.cookie.split(";").map(value => value.trim()).find(value => value.startsWith("delta_csrf="));
     return cookie ? decodeURIComponent(cookie.slice("delta_csrf=".length)) : "";
   }

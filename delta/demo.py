@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import hashlib
+import secrets
 from typing import Mapping
 
 from .core import InputSpec, RevisionRequest, Scope, Step, Workflow, step_output, workflow_input
@@ -12,6 +14,8 @@ from .fixtures import launch_package_fixtures
 DEMO_TENANT_ID = "delta-local-demo"
 DEMO_WORKFLOW_ID = "launch-package"
 _PROJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+_SCENARIO_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,15}$")
+_GENERATION_PATTERN = re.compile(r"^g[a-z0-9]{1,15}$")
 
 
 def validate_demo_project_id(project_id: str) -> str:
@@ -24,6 +28,30 @@ def validate_demo_project_id(project_id: str) -> str:
 
 def demo_scope(project_id: str) -> Scope:
     return Scope(DEMO_TENANT_ID, validate_demo_project_id(project_id))
+
+
+def new_generation() -> str:
+    """Create a short opaque generation identifier for one scenario reset."""
+
+    return f"g{secrets.token_hex(6)}"
+
+
+def workspace_scope(workspace_id: str, scenario_id: str, generation: str) -> Scope:
+    """Encode workspace, scenario, and generation into the existing project axis.
+
+    Phase 1 persisted records use the two-axis ``Scope`` contract. Keeping that
+    contract avoids breaking their keys while the short workspace digest keeps
+    the composite project ID inside the existing 64-character validation rule.
+    """
+
+    if not isinstance(workspace_id, str) or len(workspace_id) < 16:
+        raise ValueError("Workspace identity is invalid.")
+    if not _SCENARIO_PATTERN.fullmatch(scenario_id):
+        raise ValueError("Scenario identity is invalid.")
+    if not _GENERATION_PATTERN.fullmatch(generation):
+        raise ValueError("Scenario generation is invalid.")
+    workspace_digest = hashlib.sha256(workspace_id.encode("utf-8")).hexdigest()[:12]
+    return Scope(DEMO_TENANT_ID, f"w{workspace_digest}-{scenario_id}-{generation}")
 
 
 def launch_package_workflow(

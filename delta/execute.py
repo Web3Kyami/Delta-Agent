@@ -10,6 +10,7 @@ import uuid
 from typing import Any, Mapping
 
 from .core import (
+    AgentPrincipal,
     CostEstimate,
     DecisionKind,
     DependencyPending,
@@ -20,6 +21,7 @@ from .core import (
     Scope,
     Step,
     StepDecision,
+    WorkProvenance,
     WorkResult,
     build_revision_plan,
     input_signature,
@@ -74,8 +76,11 @@ class ExecutionReport:
 class DeltaEngine:
     """Execute ready workflow steps while keeping decisions and state honest."""
 
-    def __init__(self, store: SibylStore) -> None:
+    def __init__(self, store: SibylStore, principal: AgentPrincipal | None = None) -> None:
         self.store = store
+        if principal is not None and not isinstance(principal, AgentPrincipal):
+            raise ExecutionBlocked("engine principal must be an AgentPrincipal")
+        self.principal = principal
 
     def preview(self, request: RevisionRequest, *, now: datetime | None = None) -> RevisionPlan:
         """Preview persisted reusable work without executing a provider."""
@@ -209,6 +214,7 @@ class DeltaEngine:
                     completed_at=current_time,
                     fresh_until=step.freshness.fresh_until(current_time),
                     successful_attempt_id=attempt.attempt_id,
+                    provenance=self._provenance_for(step, current_time),
                 )
                 with _EXECUTION_LOCK:
                     self.store.save_work_result(result)
@@ -303,6 +309,22 @@ class DeltaEngine:
             attempts=tuple(attempts),
             outputs=outputs,
             costs=self._cost_summary(decisions),
+        )
+
+    def _provenance_for(self, step: Step, recorded_at: datetime) -> WorkProvenance | None:
+        """Attach source-agent provenance only when both identity and declaration exist.
+
+        A step without a developer-declared work category, or an engine without
+        an acting principal, produces work with no provenance. The handoff gate
+        treats such work as untrusted rather than inheriting it silently.
+        """
+
+        if self.principal is None or step.declaration is None:
+            return None
+        return WorkProvenance.from_principal(
+            self.principal,
+            step.declaration,
+            recorded_at=recorded_at,
         )
 
     def _active_attempt(self, step_id: str, signature: str) -> ExecutionAttempt | None:

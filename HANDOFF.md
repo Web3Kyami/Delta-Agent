@@ -2,57 +2,64 @@
 
 ## Current position
 
-The trusted-handoff migration plan is approved and recorded in the governing documents.
+Phase 2 of the trusted-handoff migration is implemented in the shared worktree and has passed its exit gate. It is intentionally uncommitted for this local handoff. Verified commands and results are recorded in `STATE.md` under "Phase 2 verified results (2026-09-04)".
 
-Delta is now defined as a trusted handoff layer for agent work:
+What exists now:
 
-> Agents can inherit previous work without inheriting everything.
+- `delta/handoff.py` owns the deterministic pre-prompt gate, candidate discovery, five separate verdicts, `ApprovedContext`, `HandoffRecord`, and `ReuseReceipt`.
+- `delta/core.py` carries agent/session provenance and developer-declared work metadata.
+- `delta/store.py` persists Phase 1 records and performs exact-scope Sibyl entity deletion for reset. HOT heads are overwritten because Sibyl has no state-delete operation. The append-only journal is retained audit history.
+- `delta/session.py` owns signed public demo sessions, Delta Dave identity, expiry, and per-session CSRF.
+- `delta/scenarios.py` defines the AI software-work, Home repair, and Paid research scenarios using one shared deterministic engine shape.
+- `delta/web.py` exposes authenticated scenario listing, first-open initialization, handoff evaluation, reset, and public no-spend boundaries.
+- `.venv/bin/python -m pytest -q` returned `128 passed`.
+- `.venv/bin/python scripts/phase2_mutation_review.py` caught all 8 Phase 2 guard-removal mutations.
 
-The approved flow is Agent A completion, Sibyl persistence, Agent A session end, later Agent B session, deterministic validity/trust/authorization/dependency/external-job gating, approved-context construction, missing-work execution, and a Reuse Receipt.
+What still does not exist: a real LLM call, live ACP/Base action for the new handoff path, or the Phase 4 visual redesign. The existing launch-package UI remains legacy until those phases.
 
-Documentation migration is complete. Trusted-handoff product implementation has not begun. The current code and UI still implement the legacy launch-package revision demonstration.
+## Next task: Phase 3
 
-## Next task
+Implement Phase 3 from `IMPLEMENTATION_PLAN.md` only:
 
-Implement Phase 1 only: handoff contracts and the deterministic policy gate.
+- one real LLM provider with distinct Agent A and Agent B sessions
+- approved-context construction before provider requests
+- prompt, tool, log, trace, and browser leakage tests
+- missing-work execution through the declared engine
+- persisted Reuse Receipt derived from actual decisions
 
-Phase 1 must add and verify:
+Do not begin Phase 4 or Phase 5 until the Phase 3 exit gate passes.
 
-- agent and session identity
-- source provenance for new work
-- a minimal inheritance policy
-- candidate-work discovery
-- separate validity, trust, authorization, dependency, and external-job verdicts
-- deterministic gate decisions
-- an approved-context type that cannot contain blocked work
-- handoff and Reuse Receipt schemas
-- Sibyl persistence for the new records
-- a fresh-process test proving blocked content never reaches Agent B's approved context
+## Phase 2 proof and boundaries
 
-Phase 1 must pass its exit gate before Phase 2 begins.
+- Two session cookies receive different workspace identities and composite project scopes.
+- The three scenarios initialize through `DeltaEngine` and `SibylStore.local` and remain isolated.
+- Handoff responses show reuse, blocked, rerun, and pending-dependency decisions without exposing the private canary.
+- Scenario state withholds private and private-derived outputs from the browser; only browser-safe fixture outputs are serialized.
+- Reset deletes exact-scope work, attempt, plan, handoff, and receipt entities, clears active heads, issues a new generation, and initializes fresh Agent A work. Journal history is retained and labeled as such.
+- The old signed generation is tombstoned in Sibyl and rejected on later state or reset requests.
+- Old generations are rejected with `stale_generation` when supplied to handoff or reset.
+- Public sessions receive an unauthenticated or blocked response for live approval actions. No ACP job, wallet action, settlement, or Base transaction was run.
 
 ## Do not begin early
 
-During Phase 1, do not:
+During Phase 3, do not:
 
 - redesign the application or landing page
-- add login, workspace isolation, Reset Demo, or replacement scenarios
-- call an LLM
 - add a second LLM provider
 - run a live ACP job or Base transaction
-- alter the public demo to claim handoff functionality exists
 - authorize legacy `WorkResult` records automatically
 - weaken artifact, reconciliation, spending, or settlement safeguards
+- claim any live provider, payment, or settlement success
 
-## Approved later phases
+## Approved phases and scenarios
 
-1. Phase 1: handoff contracts and deterministic policy gate
-2. Phase 2: demo identity, workspace and scenario isolation, scenarios, and reset
+1. Phase 1: handoff contracts and deterministic policy gate, complete
+2. Phase 2: demo identity, workspace and scenario isolation, scenarios, and reset, complete
 3. Phase 3: agent sessions, approved-context LLM execution, and Reuse Receipts
 4. Phase 4: application UX and landing-page redesign
 5. Phase 5: operator-gated live ACP/Base proof and submission hardening
 
-Approved scenarios:
+Scenarios:
 
 - AI software-work handoff, primary
 - Home repair handoff, general audience
@@ -73,6 +80,7 @@ Approved scenarios:
 - Base transaction evidence
 - Honest fixture, recorded, and live distinctions
 - Fair LangGraph baseline
+- Phase 1 handoff contracts, verdicts, approved-context boundary, and receipts
 
 ## Current live limitation
 
