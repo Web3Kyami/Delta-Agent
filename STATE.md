@@ -1,6 +1,6 @@
 # Delta State
 
-Last updated: 2026-09-04 (Phase 3 agent sessions, approved-context execution, and receipt finalization verified)
+Last updated: 2026-09-04 (Phase 4 handoff-first UX and landing redesign verified)
 
 ## Current direction
 
@@ -8,11 +8,21 @@ Last updated: 2026-09-04 (Phase 3 agent sessions, approved-context execution, an
 - The approved flow is Agent A completion, Sibyl persistence, Agent A session end, later Agent B session, deterministic validity/trust/authorization/dependency/external-job gating, approved-context construction, missing-work execution, and a Reuse Receipt.
 - The previous launch-package and revision-centric product surface is legacy implementation history and will be retired through the new five-phase roadmap in `IMPLEMENTATION_PLAN.md`.
 - Phase 1 of the migration is implemented and verified. `delta/handoff.py` owns agent/session provenance evaluation, a minimal inheritance policy, candidate discovery, five separate verdicts, the deterministic pre-prompt gate, `ApprovedContext`, `HandoffRecord`, and `ReuseReceipt`.
-- Phase 2 is implemented and verified in the committed checkpoint `74ffd0e`. Phase 3 is implemented and locally verified: distinct agent sessions, approved-context provider requests, declared missing-work execution, and receipt finalization are persisted through Sibyl. An external OpenAI call remains unverified because no credentials or API-spend approval were available. Phases 4 and 5 are not implemented.
+- Phase 2 is implemented and verified in the committed checkpoint `74ffd0e`. Phase 3 is implemented and locally verified: distinct agent sessions, approved-context provider requests, declared missing-work execution, and receipt finalization are persisted through Sibyl. Phase 4 is implemented and locally verified: the landing story and authenticated scenario journey now center the Agent A to Delta to Agent B boundary. An external OpenAI call remains unverified because no credentials or API-spend approval were available. Phase 5 is not implemented.
 - The existing backend remains intact: explicit workflows, signatures, freshness, Sibyl persistence, attempts, blocked and pending states, artifact checks, ACP reconciliation, spending controls, and Base evidence handling.
-- The current non-spending baseline is 138 passing tests, verified on 2026-09-04 after Phase 3. The pre-Phase-1 baseline was 74 tests.
+- The current non-spending baseline is 141 passing tests, verified on 2026-09-04 after Phase 4. The pre-Phase-1 baseline was 74 tests.
 - Existing live ACP limitations remain unchanged. Delta still does not prove paid execution through settlement and verified artifact finalization into a reusable `WorkResult`, followed by fresh-process recall and authorized Agent B inheritance.
-- The next implementation task is Phase 4: handoff-first application UX and landing redesign. Phases 1 and 2 have passed their exit gates; Phase 3's provider contract and local end-to-end path are verified, while external model execution remains unverified.
+- The next implementation task is Phase 5: operator-gated live ACP/Base proof and submission hardening. Phases 1 through 4 have passed their local exit gates; external model execution and the live paid path remain unverified.
+
+## Phase 4 verified results (2026-09-04)
+
+- `.venv/bin/python -m pytest -rA` returned `141 passed, 19 subtests passed`.
+- `tests/test_phase4_web.py` covers the redesigned landing story, authenticated scenario routes, resolved templates, static assets, login redirect, and sign out.
+- `/app/scenarios` is now the primary authenticated application entry: it presents the three approved scenarios and the public no-spend boundary.
+- `/app/scenarios/<id>` is a dedicated handoff journey with editable brief, changed constraint, and Agent B task fields; preview, reset, and fixture-run controls; decision stamps; safe outputs; and progressive receipt and evidence details.
+- The scenario interface renders API responses with text nodes, never exposes withheld private or private-derived outputs, and handles loading, stale-generation, failure, reset, and unavailable live-action messaging.
+- The landing page now explains Agent A, the Delta boundary, Agent B, reuse, blocked work, rerun, and the Reuse Receipt. The legacy launch-package routes remain available as migration history and are not the primary call to action.
+- `git diff --check`, Python compilation, and JavaScript syntax checks passed. No live OpenAI, ACP, Base, wallet, funding, settlement, or provider request was made.
 
 ## Phase 3 verified results (2026-09-04)
 

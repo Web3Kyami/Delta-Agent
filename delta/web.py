@@ -34,6 +34,8 @@ DEFAULT_MEMORY_PATH = PROJECT_ROOT / ".delta" / "demo-memory.db"
 TEMPLATE_ROOT = Path(__file__).with_name("templates")
 LANDING_TEMPLATE_PATH = TEMPLATE_ROOT / "landing.html"
 APP_TEMPLATE_PATH = TEMPLATE_ROOT / "index.html"
+SCENARIO_LIST_TEMPLATE_PATH = TEMPLATE_ROOT / "scenario-list.html"
+SCENARIO_DETAIL_TEMPLATE_PATH = TEMPLATE_ROOT / "scenario-detail.html"
 LOGIN_TEMPLATE_PATH = TEMPLATE_ROOT / "login.html"
 STATIC_ROOT = Path(__file__).with_name("static")
 MAX_BODY_BYTES = 32 * 1024
@@ -88,11 +90,10 @@ class DeltaWebApp:
                     return self._redirect(start_response, "/login")
                 return self._redirect(start_response, "/app/overview")
             if path == "/app/scenarios" and method == "GET":
-                return self._respond_app_auth(environ, start_response, "scenarios", "Choose a handoff")
+                return self._respond_scenario_list(environ, start_response)
             if path.startswith("/app/scenarios/") and method == "GET":
                 scenario_id = path.removeprefix("/app/scenarios/").strip("/")
-                scenario_definition(scenario_id)
-                return self._respond_app_auth(environ, start_response, "scenario", "Handoff scenario")
+                return self._respond_scenario_detail(environ, start_response, scenario_id)
             if path.startswith("/app/jobs/") and method == "GET":
                 return self._respond_app_auth(environ, start_response, "continuity", "Reconciliation")
             if path in APP_VIEWS and method == "GET":
@@ -231,6 +232,8 @@ class DeltaWebApp:
             "app.js": "text/javascript; charset=utf-8",
             "landing.css": "text/css; charset=utf-8",
             "landing.js": "text/javascript; charset=utf-8",
+            "scenario.css": "text/css; charset=utf-8",
+            "scenario.js": "text/javascript; charset=utf-8",
             "logo.svg": "image/svg+xml",
             "favicon.svg": "image/svg+xml",
             "solar-charger-campaign.png": "image/png",
@@ -246,6 +249,41 @@ class DeltaWebApp:
             body = asset.read_bytes()
         start_response("200 OK", [("Content-Type", content_types[relative]), ("Cache-Control", "no-cache")])
         return [body]
+
+    def _respond_scenario_list(self, environ: dict[str, Any], start_response: Callable[..., Any]):
+        try:
+            session = self._require_session(environ)
+        except SessionError:
+            return self._redirect(start_response, "/login")
+        document = SCENARIO_LIST_TEMPLATE_PATH.read_text()
+        document = document.replace("{{CSRF_TOKEN}}", session.csrf_token)
+        document = document.replace("{{DISPLAY_NAME}}", DEMO_DISPLAY_NAME)
+        document = document.replace("{{WORKSPACE_ID}}", session.workspace_id[:8])
+        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Cache-Control", "no-store"), ("X-Delta-CSRF", session.csrf_token)])
+        return [document.encode()]
+
+    def _respond_scenario_detail(self, environ: dict[str, Any], start_response: Callable[..., Any], scenario_id: str):
+        definition = scenario_definition(scenario_id)
+        try:
+            session = self._require_session(environ)
+        except SessionError:
+            return self._redirect(start_response, "/login")
+        document = SCENARIO_DETAIL_TEMPLATE_PATH.read_text()
+        replacements = {
+            "{{CSRF_TOKEN}}": session.csrf_token,
+            "{{DISPLAY_NAME}}": DEMO_DISPLAY_NAME,
+            "{{WORKSPACE_ID}}": session.workspace_id[:8],
+            "{{SCENARIO_ID}}": definition.scenario_id,
+            "{{SCENARIO_TITLE}}": definition.title,
+            "{{SCENARIO_AUDIENCE}}": definition.audience,
+            "{{SCENARIO_DESCRIPTION}}": definition.description,
+            "{{INITIAL_BRIEF}}": definition.initial_inputs["brief"],
+            "{{INITIAL_REVISION}}": definition.initial_inputs["revision"],
+        }
+        for key, value in replacements.items():
+            document = document.replace(key, value)
+        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Cache-Control", "no-store"), ("X-Delta-CSRF", session.csrf_token)])
+        return [document.encode()]
 
     def _scenario_session(self, environ: dict[str, Any], scenario_id: str) -> tuple[DemoSession, Any, SibylStore, Any, bool]:
         session = self._require_session(environ)

@@ -158,4 +158,17 @@ Inspect major routes at 1440, 1024, 768, and 390 CSS pixels. Check purpose, prim
 
 `DESIGN.md` owns durable interaction and visual principles. `MASTER_PLAN.md` owns stable product and architecture requirements. `IMPLEMENTATION_PLAN.md` owns build order and exit gates. `STATE.md` owns current verified implementation status.
 
-No actual new interface design has been implemented by this document update.
+The Phase 4 implementation below records the first shipped interface direction.
+
+## Phase 4 implementation note (2026-09-04)
+
+The handoff-first interface now uses the documented visual direction: a dark,
+high-contrast landing story with exposed structural rules, lime/orange meaning
+stamps, and a visible Agent A → Delta → Agent B boundary; the application uses
+the same rules more quietly on a warm paper canvas. Scenario pages prioritize
+editable work and gate decisions, then disclose the Reuse Receipt and Sibyl,
+provider, and cost evidence in secondary surfaces. Mobile layouts collapse into
+a vertical causal sequence, preserve keyboard focus, and honor reduced motion.
+All successful states on the scenario page come from the Phase 3 API response;
+the public mode remains deterministic-fixture only and cannot authorize paid
+actions.

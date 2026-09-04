@@ -1,12 +1,12 @@
 # Delta Demo Runbook
 
-> **Migration notice:** The launch-package paths in this runbook document the currently implemented legacy demo and historical integration evidence. They are not the approved product direction or the final judge story. Phase 2 handoff scenarios are now available at `/app/scenarios`; the legacy flow remains separate until later migration phases.
+> **Migration notice:** The launch-package paths in this runbook document legacy implementation history and historical integration evidence. The approved judge story is the handoff journey at `/app/scenarios`; the legacy flow remains available only for regression coverage.
 
 ## Purpose
 
 This runbook defines the reproducible judge path and the evidence needed to support Delta's claims. It must never instruct the presenter to fake completion, cost, provider state, or partner integration.
 
-The approved judge path uses AI software-work handoff as the primary scenario, Home repair handoff for a general audience, and Paid research handoff for ACP/Base evidence. Phase 2 proves isolated deterministic fixture state, reset semantics, and the pre-prompt gate. LLM execution and live settlement remain later phases.
+The approved judge path uses AI software-work handoff as the primary scenario, Home repair handoff for a general audience, and Paid research handoff for ACP/Base evidence. Phases 2 through 4 prove isolated deterministic fixture state, reset semantics, the pre-prompt gate, approved-context fixture execution, and the browser receipt. External model execution and live settlement remain later phases.
 
 The hackathon demo is limited to 2 to 5 minutes, so full live provider execution may need to be prepared in advance while still showing a genuine fresh-session recall and genuine integration evidence.
 
@@ -16,9 +16,9 @@ Every visible success must come from the real path the demo claims to show. Do n
 
 Deterministic fixtures are allowed for local planner and failure-state demonstrations only. Label every fixture or deterministic test service clearly, keep its path distinct from live adapters, and never present fixture behavior as live ACP, Sibyl, Base, provider, wallet, job, or transaction evidence. If a live dependency is unavailable or a result cannot be verified, show the honest unavailable, error, blocked, ambiguous, or reconciliation state.
 
-## Local Phase 5 demonstration
+## Local Phase 4 demonstration
 
-Start the server with `.venv/bin/python run_demo.py`, then open `http://127.0.0.1:8000`. The public page contains a clearly labelled illustrative revision. Open `/app/revisions` through the primary call to action for the working demonstration. The application is marked `Demo mode`. Preview, execute, and restore use the real Delta engine and Sibyl store, while the launch-package services are input-sensitive deterministic fixtures. Their outputs, source labels, and cost status must remain visible as fixture evidence. Do not describe this path as live ACP, provider, wallet, job, or Base evidence. Paid provider actions stay unavailable until a separately approved live integration is attached.
+Start the server with `.venv/bin/python run_demo.py`, then open `http://127.0.0.1:8000`. Follow the landing page's `Open a handoff scenario` action, sign in with the supplied demo account, and open `AI software-work handoff`. Edit the changed constraint, preview the handoff, and show reuse, blocked, rerun, and waiting decisions. Run Agent B through the clearly labelled deterministic fixture, then expand the Reuse Receipt and trust details. Reset the scenario to show a fresh generation. No live ACP, provider, wallet, job, Base, or transaction action is available in this public path.
 
 ## Current recording path
 

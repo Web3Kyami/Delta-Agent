@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f1e8">
+  <meta name="delta-csrf-token" content="{{CSRF_TOKEN}}">
+  <title>Choose a handoff | Delta</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/scenario.css">
+</head>
+<body class="scenario-app">
+  <a class="skip-link" href="#main-content">Skip to scenarios</a>
+  <header class="scenario-header">
+    <a class="brand" href="/app/scenarios" aria-label="Delta scenarios"><img src="/static/logo.svg" width="28" height="28" alt=""><span>delta</span></a>
+    <div class="account-bar"><span>{{DISPLAY_NAME}} · workspace {{WORKSPACE_ID}}</span><button id="sign-out" type="button">Sign out</button></div>
+  </header>
+  <main id="main-content" class="scenario-main">
+    <section class="scenario-hero" aria-labelledby="scenario-title">
+      <p class="kicker">01 / Start at the boundary</p>
+      <h1 id="scenario-title">Choose the work Agent B should inherit.</h1>
+      <p class="intro">Each scenario starts with Agent A's completed work. Change one constraint, then watch Delta decide what can cross, what stops, and what needs new work.</p>
+    </section>
+    <section class="scenario-list" aria-labelledby="available-title">
+      <div class="section-rule"><span id="available-title">Available handoffs</span><span>Public demo · no spend</span></div>
+      <div class="scenario-grid">
+        <a class="scenario-card" href="/app/scenarios/software">
+          <span class="scenario-number">01</span><span class="scenario-tag">Developer-native</span>
+          <h2>AI software-work handoff</h2><p>Safe implementation context crosses. A changed constraint sends only missing work back through Delta.</p><span class="card-link">Open scenario <span aria-hidden="true">↗</span></span>
+        </a>
+        <a class="scenario-card" href="/app/scenarios/repair">
+          <span class="scenario-number">02</span><span class="scenario-tag">General audience</span>
+          <h2>Home repair handoff</h2><p>Verified work moves to Agent B while a private homeowner note remains behind the boundary.</p><span class="card-link">Open scenario <span aria-hidden="true">↗</span></span>
+        </a>
+        <a class="scenario-card" href="/app/scenarios/research">
+          <span class="scenario-number">03</span><span class="scenario-tag">ACP and Base evidence</span>
+          <h2>Paid research handoff</h2><p>Reuse verified evidence without replaying the same evidence step. External actions stay unavailable here.</p><span class="card-link">Open scenario <span aria-hidden="true">↗</span></span>
+        </a>
+      </div>
+    </section>
+    <aside class="boundary-note" aria-label="Public demo boundary"><span class="stamp">DEMO</span><div><strong>Public mode is read, decide, and fixture-run.</strong><p>It cannot authorize live ACP, wallet, funding, or Base settlement. Those controls remain blocked until an operator supplies separate approval.</p></div></aside>
+  </main>
+  <footer class="scenario-footer"><a href="/">Back to Delta</a><span>Handoff decisions are read from Sibyl-backed state.</span></footer>
+  <script src="/static/scenario.js" defer></script>
+</body>
+</html>

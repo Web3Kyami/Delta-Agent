@@ -9,15 +9,15 @@ Delta's approved direction is a trusted handoff layer for agent work:
 
 Agent A completes work and Sibyl persists it. When Agent B begins later, Delta will recall candidate work and deterministically evaluate validity, trust, authorization, dependencies, and external-job safety before constructing Agent B's context. Approved work may cross the handoff. Blocked work must stay outside the receiving model's prompt. Missing work executes, and a Reuse Receipt explains the outcome.
 
-The trusted-handoff migration is underway. Phase 1 and Phase 2 are implemented and
-verified in the shared worktree; the remaining LLM, product-interface, and live
-settlement phases are still planned. The repository also retains the legacy
-launch-package revision demonstration while it is migrated through
+The trusted-handoff migration is underway. Phases 1 through 4 are implemented and
+locally verified in the shared worktree; external model execution and live
+settlement remain planned. The repository also retains the legacy launch-package
+revision demonstration while it is migrated through
 `IMPLEMENTATION_PLAN.md`.
 
 ## Status
 
-**Current status: Phases 1 through 3 of the trusted-handoff roadmap are implemented and locally verified. The existing launch-package surface remains legacy. Phase 4 is next, after an operator-approved live provider check if live evidence is required.**
+**Current status: Phases 1 through 4 of the trusted-handoff roadmap are implemented and locally verified. The scenario-first handoff surface is primary; the existing launch-package surface remains legacy. Phase 5 is next.**
 
 ### Current capabilities
 
@@ -27,6 +27,7 @@ Implemented and verified:
 - **Migration Phase 1**: trusted-handoff contracts and deterministic policy gate
 - **Migration Phase 2**: signed demo identity, isolated workspaces and scenarios, scoped reset
 - **Migration Phase 3**: distinct agent sessions, approved-context execution, provider boundary, and Reuse Receipts
+- **Migration Phase 4**: handoff-first application journey and Delta-specific neo-brutalist landing story
 - **Legacy Phase 2**: Sibyl Memory persistence (entities + journal + artifact references)
 - **Legacy Phase 3**: deterministic execution engine, attempt lifecycle, blocked/failure states
 - **Legacy Phase 4**: no-spend Virtuals ACP adapter (read-only history, JSON CLI, reconciliation)
@@ -34,7 +35,7 @@ Implemented and verified:
 - **Phase 6**: LangGraph comparison baseline (overlap measured, not claimed novel)
 - **Phase 7**: live Aaga ACP history and Base transaction evidence, with the paid execution-to-reusable-work gap documented rather than claimed as complete.
 
-The current non-spending Python test suite is **138 passing tests**, verified on
+The current non-spending Python test suite is **141 passing tests**, verified on
 2026-09-04. See `STATE.md` for verified facts, onchain evidence, and the next action.
 
 ### Approved migration direction
@@ -149,8 +150,8 @@ Example revision behavior:
 .venv/bin/python run_demo.py
 ```
 
-Then open `http://127.0.0.1:8000`. Use the primary call to action to enter the revision
-workspace at `/app/revisions`. The default local store is `.delta/demo-memory.db`, which
+Then open `http://127.0.0.1:8000`. Use the primary call to action to enter the scenario
+workspace at `/app/scenarios`. The default local store is `.delta/demo-memory.db`, which
 is ignored by source control. This mode runs only deterministic fixtures — no live ACP job,
 no spending approval, no settlement, no transaction.
 
@@ -165,7 +166,7 @@ evidence or run without matching approval.
 .venv/bin/python -m pytest
 ```
 
-Last run: **73 passed, 15 subtests passed**. The three tests in
+Last run: **141 passed, 19 subtests passed**. The three tests in
 `tests/test_phase7_live.py` are labelled recorded-data persistence fixtures, not
 live ACP tests. They include a genuinely new Python process that restores the
 recorded observation from Sibyl.

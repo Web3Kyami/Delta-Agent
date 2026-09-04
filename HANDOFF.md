@@ -2,7 +2,7 @@
 
 ## Current position
 
-Phase 3 of the trusted-handoff migration is implemented and locally verified. The Phase 1 and 2 checkpoint is `74ffd0e`, followed by the current Phase 3 checkpoint. Verified commands and results are recorded in `STATE.md` under the Phase 2 and Phase 3 sections.
+Phase 4 of the trusted-handoff migration is implemented and locally verified. The Phase 1 and 2 checkpoint is `74ffd0e`, followed by the Phase 3 checkpoint and the current Phase 4 work. Verified commands and results are recorded in `STATE.md` under the Phase 2, Phase 3, and Phase 4 sections.
 
 What exists now:
 
@@ -13,20 +13,22 @@ What exists now:
 - `delta/scenarios.py` defines the AI software-work, Home repair, and Paid research scenarios using one shared deterministic engine shape.
 - `delta/web.py` exposes authenticated scenario listing, first-open initialization, handoff evaluation, reset, and public no-spend boundaries.
 - `delta/agents` owns the provider-neutral AgentRunner contract, deterministic fixture runner, OpenAI Responses adapter, agent-session/run records, approved-context request construction, and post-execution receipt finalization.
-- `.venv/bin/python -m pytest -q` returned `138 passed`.
+- `delta/templates/scenario-list.html` and `delta/templates/scenario-detail.html` provide the handoff-first application journey. `delta/static/scenario.css` and `delta/static/scenario.js` provide the responsive, accessible scenario interface.
+- The landing page now leads with the Agent A to Delta to Agent B boundary and the Reuse Receipt. Legacy launch-package routes remain available but are no longer the primary product path.
+- `.venv/bin/python -m pytest -rA` returned `141 passed, 19 subtests passed`.
 - `.venv/bin/python scripts/phase2_mutation_review.py` caught all 8 Phase 2 guard-removal mutations.
 
-What remains unverified: an external OpenAI call, live ACP/Base action for the new handoff path, and the Phase 4 visual redesign. No external model call was made because credentials and API-spend approval were not available. The existing launch-package UI remains legacy until those phases.
+What remains unverified: an external OpenAI call and live ACP/Base action for the new handoff path. No external model call was made because credentials and API-spend approval were not available. Phase 5 owns live proof and submission hardening.
 
-## Next task: Phase 4
+## Next task: Phase 5
 
-Implement Phase 4 from `IMPLEMENTATION_PLAN.md` only:
+Implement Phase 5 from `IMPLEMENTATION_PLAN.md` only:
 
-- handoff-first application UX and landing-page redesign
-- scenario-first browser flow using the Phase 3 endpoint
-- progressive disclosure for receipts and provider evidence
+- operator-gated live ACP/Base proof and submission hardening
+- preserve the Phase 4 scenario journey and no-spend public boundary
+- reconcile any known or ambiguous ACP attempt before considering a replacement
 
-Do not begin Phase 5 until the Phase 4 exit gate passes.
+Do not claim live provider, payment, settlement, or reusable-work success until the Phase 5 exit gate passes.
 
 ## Phase 2 proof and boundaries
 

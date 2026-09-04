@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f1e8">
+  <meta name="delta-csrf-token" content="{{CSRF_TOKEN}}">
+  <title>{{SCENARIO_TITLE}} | Delta</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/scenario.css">
+</head>
+<body class="scenario-app detail-page" data-scenario-id="{{SCENARIO_ID}}">
+  <a class="skip-link" href="#main-content">Skip to handoff</a>
+  <header class="scenario-header">
+    <a class="brand" href="/app/scenarios" aria-label="Delta scenarios"><img src="/static/logo.svg" width="28" height="28" alt=""><span>delta</span></a>
+    <nav class="detail-nav" aria-label="Scenario navigation"><a href="/app/scenarios">All scenarios</a><button id="sign-out" type="button">Sign out</button></nav>
+  </header>
+  <main id="main-content" class="scenario-main">
+    <section class="detail-hero" aria-labelledby="detail-title">
+      <div><p class="kicker">02 / Agent A → Delta → Agent B</p><h1 id="detail-title">{{SCENARIO_TITLE}}</h1><p class="intro">{{SCENARIO_DESCRIPTION}}</p></div>
+      <div class="hero-aside"><span>{{SCENARIO_AUDIENCE}}</span><strong>Generation <code id="generation-label">Loading</code></strong><small>Each browser workspace has its own scenario generation.</small></div>
+    </section>
+    <div id="page-status" class="page-status" role="status" aria-live="polite">Recalling Agent A's saved work…</div>
+    <section class="handoff-layout" aria-label="Handoff journey">
+      <div class="journey-column">
+        <section class="panel request-panel" aria-labelledby="request-title">
+          <div class="panel-heading"><div><p class="kicker">03 / Agent B start</p><h2 id="request-title">Change the request</h2></div><span class="panel-index">INPUT</span></div>
+          <form id="handoff-form" novalidate>
+            <label for="brief">Task brief</label><textarea id="brief" name="brief" rows="4" required>{{INITIAL_BRIEF}}</textarea>
+            <label for="revision">Changed constraint</label><input id="revision" name="revision" value="{{INITIAL_REVISION}}" required>
+            <label for="task">Agent B task</label><textarea id="task" name="task" rows="3" required>Continue from the approved work and explain what changed.</textarea>
+            <div class="form-actions"><button id="preview-button" class="button button-ink" type="submit">Preview the handoff <span aria-hidden="true">↗</span></button><button id="reset-button" class="button button-quiet" type="button">Reset scenario</button></div>
+            <p class="form-note">Preview evaluates the gate only. The fixture run executes missing work and persists a receipt.</p>
+          </form>
+        </section>
+        <section class="panel decisions-panel" aria-labelledby="decisions-title">
+          <div class="panel-heading"><div><p class="kicker">04 / Delta gate</p><h2 id="decisions-title">What crosses the boundary</h2></div><span id="decision-stamp" class="decision-stamp">WAITING</span></div>
+          <div id="decision-list" class="decision-list"><p class="empty-state">Delta is recalling the current generation.</p></div>
+          <div class="boundary-line" aria-hidden="true"><span>Agent A work</span><b></b><span>Agent B context</span></div>
+          <button id="run-button" class="button button-lime" type="button" disabled>Run Agent B with approved work <span aria-hidden="true">↗</span></button>
+          <p id="run-note" class="form-note">A current preview is required before the fixture run.</p>
+        </section>
+      </div>
+      <aside class="evidence-column">
+        <section class="panel receipt-panel" aria-labelledby="receipt-title">
+          <div class="panel-heading"><div><p class="kicker">05 / Reuse Receipt</p><h2 id="receipt-title">The consequence</h2></div><span id="receipt-status" class="receipt-status">Not recorded</span></div>
+          <div id="receipt-summary" class="receipt-summary"><strong>Nothing has crossed yet.</strong><span>Preview the current request to see the decision.</span></div>
+          <details id="receipt-details"><summary>Show receipt entries</summary><div id="receipt-entries" class="receipt-entries"><p class="empty-state">No receipt entries yet.</p></div></details>
+        </section>
+        <section class="panel evidence-panel" aria-labelledby="evidence-title">
+          <div class="panel-heading"><div><p class="kicker">06 / Evidence</p><h2 id="evidence-title">Trust details</h2></div><span class="evidence-mark">SIBYL</span></div>
+          <dl class="evidence-list"><div><dt>Workspace</dt><dd id="workspace-label">{{WORKSPACE_ID}}</dd></div><div><dt>Scenario generation</dt><dd id="generation-evidence">Loading</dd></div><div><dt>Persistence</dt><dd>Sibyl-backed</dd></div><div><dt>Provider mode</dt><dd id="provider-mode">Deterministic fixture</dd></div><div><dt>Actual cost</dt><dd id="actual-cost">Not recorded</dd></div></dl>
+          <p class="evidence-note">Technical identities and provider evidence stay here. Blocked work is never rendered as a detail or output.</p>
+        </section>
+        <section class="panel outputs-panel" aria-labelledby="outputs-title"><div class="panel-heading"><div><p class="kicker">07 / Safe outputs</p><h2 id="outputs-title">Approved context</h2></div></div><div id="output-list" class="output-list"><p class="empty-state">No browser-safe output loaded.</p></div></section>
+      </aside>
+    </section>
+  </main>
+  <footer class="scenario-footer"><a href="/app/scenarios">Choose another scenario</a><span>Public demo · live spending remains blocked</span></footer>
+  <script src="/static/scenario.js" defer></script>
+</body>
+</html>
