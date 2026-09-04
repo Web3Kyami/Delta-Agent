@@ -8,7 +8,7 @@ any state-changing ACP command. Local evidence remains outside source control.
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -35,6 +35,8 @@ from delta.store import SibylStore
 
 
 CHAIN_ID = 8453
+APPROVAL_EXPIRES_AT = datetime(2026, 9, 4, 5, 0, tzinfo=timezone.utc)
+MAX_GAS_USD = Decimal("0.05")
 PROVIDER_ADDRESS = "0xb0aca700745a989a1cb859eecfe0fd9afbc066aa"
 OFFERING_ID = "019d7c71-44c9-7329-bcf6-3edb953d6711"
 OFFERING_NAME = "content_generation"
@@ -87,7 +89,7 @@ def live_context() -> tuple[SibylStore, ACPAdapter, Any, Any, str]:
         "USDC",
         "0.01",
         "0.01",
-        now + timedelta(hours=2),
+        APPROVAL_EXPIRES_AT,
     )
     adapter = ACPAdapter(store, ACPCommandRunner(command_prefix=CLI_PREFIX))
     return store, adapter, plan, approval, decision.input_signature
@@ -96,6 +98,19 @@ def live_context() -> tuple[SibylStore, ACPAdapter, Any, Any, str]:
 def require_approval(args: argparse.Namespace) -> None:
     if not args.approve:
         raise SystemExit("This command needs --approve-aaga-content-job after external approval.")
+    if datetime.now(timezone.utc) >= APPROVAL_EXPIRES_AT:
+        raise SystemExit("This approval expired at 2026-09-04T05:00:00Z. Obtain a new approval before any state-changing ACP action.")
+
+
+def require_gas_ceiling(args: argparse.Namespace) -> None:
+    if args.estimated_gas_usd is None:
+        raise SystemExit("This approval caps gas at $0.05. Supply --estimated-gas-usd before a transaction action.")
+    try:
+        estimate = Decimal(args.estimated_gas_usd)
+    except InvalidOperation as error:
+        raise SystemExit("Estimated gas must be a finite non-negative decimal in USD.") from error
+    if not estimate.is_finite() or estimate < 0 or estimate > MAX_GAS_USD:
+        raise SystemExit("Estimated gas exceeds the approved $0.05 USD ceiling.")
 
 
 def print_result(label: str, result: Any) -> None:
@@ -140,6 +155,7 @@ def main() -> int:
     parser.add_argument("--approve", action="store_true", help="confirm the exact approved Aaga validation scope")
     parser.add_argument("--amount", help="exact provider budget amount returned by ACP")
     parser.add_argument("--job-id", help="job identity when it is not yet persisted")
+    parser.add_argument("--estimated-gas-usd", help="preflight gas estimate in USD, at or below the approved $0.05 ceiling")
     args = parser.parse_args()
 
     store, adapter, plan, approval, input_signature = live_context()
@@ -154,6 +170,9 @@ def main() -> int:
                     "provider_chain_id": attempt.provider_chain_id if attempt else None,
                     "provider_id": attempt.provider_id if attempt else None,
                     "offering_id": attempt.offering_id if attempt else None,
+                    "max_service_spend": "0.01 USDC",
+                    "max_gas_usd": format(MAX_GAS_USD, "f"),
+                    "approval_expires_at": APPROVAL_EXPIRES_AT.isoformat(),
                 },
                 sort_keys=True,
             )
@@ -180,6 +199,8 @@ def main() -> int:
                     "transaction_hashes": list(record.transaction_hashes),
                     "deliverable_present": record.deliverable is not None,
                     "message": "Read-only provider history was reconciled into the persisted attempt. No replacement or payment was attempted.",
+                    "max_gas_usd": format(MAX_GAS_USD, "f"),
+                    "approval_expires_at": APPROVAL_EXPIRES_AT.isoformat(),
                 },
                 sort_keys=True,
             )
@@ -187,6 +208,8 @@ def main() -> int:
         return 0
 
     require_approval(args)
+    if args.action in {"create", "fund", "complete"}:
+        require_gas_ceiling(args)
     if args.action == "create":
         response = adapter.create_job(
             plan,

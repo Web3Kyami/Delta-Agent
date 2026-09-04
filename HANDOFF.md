@@ -32,6 +32,7 @@ Continue Phase 5 from `IMPLEMENTATION_PLAN.md` only after the live preconditions
 - reconcile any known or ambiguous ACP attempt before considering a replacement
 - refresh the provider and offering through read-only discovery
 - obtain explicit approval for Base `8453`, the selected provider and offering, the allowed step, transaction actions, service cap, and expiry
+- Current approved envelope: one Aaga `content_generation` step, up to `0.01 USDC` service spend, up to `$0.05` estimated gas, expiring `2026-09-04T05:00:00Z`. The operator script requires a supplied gas estimate at or below the ceiling before any transaction action.
 
 Do not claim live provider, payment, settlement, or reusable-work success until the Phase 5 exit gate passes. The public demo remains no-spend.
 
