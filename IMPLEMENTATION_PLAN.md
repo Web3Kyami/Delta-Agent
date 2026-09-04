@@ -2,673 +2,335 @@
 
 ## Purpose
 
-This document owns implementation order, phase dependencies, acceptance criteria, and exit gates. Stable requirements are defined in `MASTER_PLAN.md`.
+This document is the primary roadmap for Delta's approved migration from a launch-package revision demo to trusted handoff for agent work. Stable requirements belong in `MASTER_PLAN.md`, current truth in `STATE.md`, and security rules in `SECURITY.md`. Work proceeds one phase at a time. A phase is complete only after its exit gate passes.
 
-A phase is complete only when its exit gate is verified. Update `STATE.md` after each meaningful verification.
+## Product definition
 
-## Roadmap at a glance
+Delta is a trusted handoff layer for agent work.
 
-The current workspace contains the planning package only. Build the reusable engine before the demonstration interface, and keep live spending last.
+> Agents can inherit previous work without inheriting everything.
 
-1. **Phase 0, discovery:** inspect the real implementation environment, verify current integration contracts, and discover suitable ACP offerings without spending.
-2. **Phase 1, core engine:** implement schemas, explicit dependencies, signatures, freshness, fixture executors, and provider-neutral tests.
-3. **Phase 2, persistence:** connect Sibyl as the authoritative store, keep artifacts outside Sibyl, and prove fresh-process recovery.
-4. **Phase 3, revision behavior:** implement preview decisions, runtime downstream reevaluation, structured reasons, and the full deterministic scenario suite.
-5. **Phase 4, paid-job safety:** add the narrow ACP adapter and fixture-based lifecycle reconciliation before any live transaction.
-6. **Phase 5, product workspace:** expose workflow inputs, decisions, costs, outputs, approvals, provider states, and recovery states in a responsive operations interface.
-7. **Phase 6, baseline:** build a fair LangGraph comparison and record measured overlap and added Delta behavior.
-8. **Phase 7, live validation:** exercise one approved ACP service job and Base payment or settlement, then prove restart recovery from Sibyl.
-9. **Phase 8, submission hardening:** run the complete verification path, remove secrets, pin versions, update the public documentation, and capture honest evidence.
+The product flow is:
 
-The dependency chain is sequential through Phase 4. Phase 1 depends on foundation readiness, not on a paid ACP job or Base deployment. Phase 5 depends on the engine and persistence behavior. Phase 6 depends on deterministic Delta behavior. Phase 7 depends on live ACP readiness, Base qualification readiness, every earlier required foundation gate, and explicit user approval for the exact provider, chain, actions, and budget. Phase 8 depends on the evidence from all required paths.
+1. Agent A completes work and Sibyl persists its result, provenance, artifacts, attempts, and external-job identity.
+2. Agent A's session ends.
+3. Agent B starts later with a distinct identity and session.
+4. Delta recalls candidate work from Sibyl.
+5. Delta deterministically evaluates validity, trust, authorization, dependencies, and external-job safety.
+6. Blocked work stays outside Agent B's prompt and context. Approved work may cross the handoff.
+7. Missing or invalid work executes through declared workflows.
+8. Delta produces a Reuse Receipt explaining the decisions, evidence, and cost consequences.
 
-## Project-wide exit-gate rule
+Remembered work is not automatically trusted work. An LLM may consume approved context, but it never owns reuse eligibility, access control, dependency declarations, or paid-job safety decisions.
 
-Every phase exit gate requires behavioral evidence from the path that the phase claims to implement. A phase is not complete because files exist or a happy-path function returns a value. Where the phase exposes a meaningful capability, verification must cover the relevant path from user input or API request through the engine, adapter or service, real computation or state lookup, required persistence, returned result, and user-visible state. Include at least one positive case and one negative or changed-input case where practical.
+## Architectural direction
 
-Fixtures and deterministic services may support planned local tests, but they must be labelled and kept distinct from live adapters. Fixture output cannot prove a live integration. If a dependency is unavailable or the result cannot be verified, record an honest unverified, blocked, unavailable, ambiguous, or reconciliation state.
+Preserve and extend the current Python engine:
 
-## Phase 0: Repository and live-integration discovery
+- Keep developer-declared workflows, relevant inputs, dependencies, implementation identities, and freshness policies.
+- Keep deterministic signatures, `WorkResult`, attempt lifecycle, `pending_dependency`, blocked states, artifact verification, and downstream reevaluation.
+- Keep Sibyl authoritative for durable work, handoff, plan, receipt, attempt, and recovery state.
+- Keep the ACP adapter, reconciliation boundaries, cumulative spending controls, and Base evidence handling.
+- Add agent and session provenance, a minimal inheritance policy, candidate discovery, a deterministic handoff gate, approved-context construction, and Reuse Receipts.
+- Add a provider-neutral LLM boundary only after the deterministic gate is verified.
 
-### Goal
+The gate runs before prompt construction. A valid result may still be unauthorized. Blocked content must never be sent to an LLM with instructions to ignore it.
 
-Confirm the actual workspace, preserve existing work, verify current APIs, and determine whether the launch-package services can be demonstrated with current ACP offerings.
+## Cross-phase rules and non-goals
 
-### Work
+- Work only on the current phase and record verified results in `STATE.md`.
+- Preserve existing persisted records or migrate them explicitly. Legacy `WorkResult` records are not automatically authorized for cross-agent inheritance.
+- Do not weaken ACP spending, settlement, reconciliation, artifact, or approval requirements.
+- Do not claim that fixture, recorded, or historical evidence is a current live execution.
+- Do not add a parallel database containing Delta's authoritative state or claim exactly-once execution.
+- Do not add Sui, Walrus, Seal, a token, custom escrow, provider marketplace, workflow builder, distributed scheduler, or background queue.
+- The public demo credential must never grant ACP, wallet, funding, settlement, or other valuable authority.
+- Preserve honest loading, unavailable, blocked, ambiguous, stale, and error states.
 
-1. Inspect repository structure, instructions, package files, current tests, existing UI, and current license.
-2. Read installed skills relevant to Sibyl, ACP, Base, security, and the repository stack.
-3. Verify the official sources listed in `REFERENCES.md` again at build time.
-4. Verify installed or chosen versions of:
-   - Python
-   - Sibyl Memory client/CLI
-   - Node.js
-   - `@virtuals-protocol/acp-cli`
-   - LangGraph used by the comparison harness
-5. Verify the current ACP authentication path. For scripts or output-captured runners, use `acp configure start --json`, relay the returned URL to the user, then poll `acp configure complete --request-id <requestId> --json`. Do not run bare `acp configure` from a non-streaming runner.
-6. Run read-only ACP discovery with machine-readable output after an active agent is available. Use `acp browse ... --json` and record the exact command output or the precise blocker.
-7. Verify the live event requirement. Current ACP client guidance requires `acp events listen` before creating a job. Treat the listener as a live progress dependency, while using persisted job history, status queries, and Delta state as restart recovery sources.
-8. Search for suitable online service-only offerings for:
-   - image or visual generation
-   - announcement/copy generation
-   - translation
-9. For each candidate record:
-   - provider identity
-   - offering identity
-   - chain support
-   - current price
-   - SLA
-   - requirements schema
-   - deliverable format
-   - online/availability status
-   Treat an `--online online` filter as a query constraint when the response does not expose an independent online field. Do not upgrade that result to a provider heartbeat claim.
-10. Prefer Base mainnet chain ID 8453 for live service jobs when supported.
-11. Confirm whether ACP job creation, funding, and completion JSON expose transaction hashes or enough identifiers for Base receipt evidence.
-12. Verify with current hackathon or partner guidance whether the planned deployment and one ACP-on-Base service flow satisfy the current Base and Virtuals partner criteria.
-13. If not, identify the smallest separate product-relevant Base action that meets the rule without adding speculative infrastructure.
+## Scenario strategy
 
-### No-spend boundary
+All scenarios use the same handoff, policy, persistence, execution, and receipt architecture.
 
-Phase 0 discovery is read-only, with authorized non-spending ACP identity and signer registration as the only setup exceptions. Do not create jobs, top up wallets, fund escrow, approve spending, or broadcast any transaction.
+### Primary: AI software-work handoff
 
-### Foundation readiness gate
+Agent A completed several parts of a software task. Agent B takes over after a requirement or implementation constraint changes. The scenario must show valid and authorized work crossing the handoff, valid work blocked by policy, work that must rerun, downstream work waiting for a dependency, approved context passed without blocked content, and a final Reuse Receipt. It should show tangible software work without becoming a terminal or operations dashboard. Phase 2 will refine the exact work items from the Phase 1 engine contracts.
 
-Foundation readiness may be marked `Verified` when:
+### General audience: Home repair handoff
 
-- repository destination is unambiguous
-- current source versions are recorded
-- Sibyl initialization, status, health, exact persistence APIs, tenant selection, and a fresh-process smoke test are verified
-- ACP authentication, agent identity, and any required non-spending signer setup are verified
-- the read-only discovery command has been attempted with machine-readable output, with any CLI or policy blocker recorded exactly
-- the current ACP authentication and event-listener requirements are recorded
-- unresolved JSON/API questions that affect money safety are narrowed enough for fixture implementation
-- no funds have moved
+A homeowner's repair task explains that existing, valid work can still be withheld. Candidate items may include a verified photo inventory, damage summary, repair scope, private note, and downstream insurer-facing summary.
 
-### Live ACP readiness gate
+### Paid path: Paid research handoff
 
-Live ACP readiness passes only when at least one suitable live ACP service offering is returned by read-only discovery with its provider, offering, chain, price, requirements, deliverable, availability, timing, and reconciliation metadata recorded. A signer, authentication result, or CLI command that returns no provider data does not satisfy this gate.
+A narrowly scoped paid research or content artifact demonstrates that verified ACP work can survive a later handoff and avoid an unnecessary replacement purchase. Final provider and offering selection follows current read-only discovery and cannot be invented or locked before verification.
 
-The verification must exercise the real browse path and include either a changed query or an explicit chain-filter comparison where the CLI supports it. A successful command with a fixed or fixture response is not evidence of live marketplace readiness.
+## LLM rollout strategy
 
-### Base partner qualification gate
+1. Complete the deterministic gate first.
+2. Add one real provider with distinct Agent A and Agent B sessions.
+3. Retain a clearly labelled deterministic runner for tests and public fallback.
+4. Treat LLM output as untrusted until validated.
+5. Defer a second provider until the one-provider path is stable.
 
-Base partner qualification is tracked separately from foundation readiness. Record the planned live Base action, deployment requirement, and unresolved partner-evidence question, but do not block the provider-agnostic engine solely because no Base deployment or transaction exists yet. Base evidence remains required before claiming the completed live integration or final submission.
+## Public demo identity and isolation
 
-### Phase 0 status rule
+- Provide one fixed public account with its email and password shown on the login page, no signup, and no user database.
+- Show `Delta Dave`, support sign out, and describe the login as guided demo access rather than strong security.
+- Use a signed, HttpOnly, SameSite session cookie and per-session CSRF token.
+- Create a random server-controlled workspace for each browser session. Authentication identity and workspace identity remain separate.
+- Scope state by workspace, scenario, and generation so judges and scenarios cannot share mutable state.
+- Initialize a scenario through real engine and Sibyl paths when it is first opened.
+- Reset only the selected workspace and scenario. Use safe scoped deletion if the official Sibyl API supports it, otherwise rotate generations and label old records archived.
+- Reject stale generation, preview, gate, handoff, and receipt identities.
 
-Foundation readiness may unlock Phase 1. If live ACP readiness or Base partner qualification is incomplete, mark Phase 0 `Partially complete` and keep those later gates blocked or unverified. Authentication and signer setup alone do not establish marketplace availability or Base qualification.
+## Current live ACP limitation
 
-If suitable launch-package offerings are not available, adjust the demo service mapping while preserving Delta's core purpose. Record the substitution and reason in `STATE.md` and `DEMO_RUNBOOK.md`.
+The repository contains real external ACP and Base evidence, but it does not prove a complete Delta-managed path from paid execution through settlement and artifact verification to a reusable `WorkResult`, fresh-process recall, and authorized Agent B inheritance.
 
-## Phase 1: Core schemas and deterministic execution model
+Known job `75773` remains open and unfunded after a provider requirement-shape failure. Reconcile it before considering a replacement. This limitation remains unchanged until Phase 5 produces new evidence.
 
-### Goal
+## Phase 1: Handoff contracts and deterministic policy gate
 
-Establish the provider-neutral data model and deterministic planning behavior without network calls.
+### Objective
 
-### Work
+Establish the trusted-handoff model and deterministic pre-prompt gate while leaving the current UI and live adapters unchanged.
 
-Implement the minimum conceptual schemas from `MASTER_PLAN.md`:
+### Major files and subsystems
 
-- `Scope`
-- `Workflow`
-- `Step`
-- workflow input binding
-- step output binding
-- freshness policy
-- revision request
-- revision plan and per-step decision
-- work result
-- execution attempt
-- artifact reference
-- cost estimate and provider quote
-- spend approval
-- execution event/reason code
+- `delta/core.py`, `delta/store.py`, and `delta/execute.py`
+- A focused new handoff or policy module
+- Core, execution, and Sibyl tests
 
-Implement:
+### Required work
 
-- workflow validation
-- cycle detection
-- topological order
-- JSON-only normalization
-- deterministic input signatures
-- output signatures
-- freshness evaluation
-- project-scope checks
-- decision explanations
-- spend-approval validation against plan identity, project scope, allowed steps, provider scope, chain, action scope, expiration, currency, and service-spend caps
-
-Create deterministic fixture executors for visual, announcement, and translation. They must expose call counters and configurable failure/output behavior.
+- Add `AgentPrincipal` with stable agent, session, and provider identity.
+- Add source-agent and source-session provenance to new completed work.
+- Add a minimal `InheritancePolicy`: project scope, recipient scope, optional agent allowlist, provider rule, optional provider allowlist, external-exposure rule, and developer-declared work category.
+- Add candidate discovery that distinguishes no work, invalid work, untrusted work, unauthorized work, and reusable work.
+- Add separate validity, trust, authorization, dependency, and external-job verdicts.
+- Add `HandoffRecord`, `ReuseReceipt`, and per-item receipt entries.
+- Add `HandoffGate` and an `ApprovedContext` type that can contain only approved work.
+- Persist versioned handoff and receipt records in Sibyl.
+- Store technical evidence as references and safe metadata, not copied untrusted bodies.
 
 ### Required tests
 
-- canonical signature stability
-- input key order does not change signatures
-- implementation ID changes signatures
-- project ID changes signatures
-- invalid JSON-like values are rejected
-- cycle detection
-- explicit dependency extraction
-- invalid or incomplete spend-approval values are rejected
+- Valid authorized work reuses; valid unauthorized work blocks.
+- Authorized stale or mismatched work reruns.
+- Missing or invalid artifacts prevent reuse.
+- Same-provider and provider-allowlist rules work.
+- Project boundaries prevent cross-reuse.
+- Legacy work is not automatically authorized.
+- Receipt counts and reasons match gate decisions.
+- Blocked content is absent from `ApprovedContext`.
+- A fresh process produces the same gate result.
+- Existing ACP, artifact, spending, execution, and baseline tests still pass.
+
+### Acceptance criteria
+
+- Every candidate has separate inspectable verdicts.
+- Validity and authorization remain independent.
+- Future prompt construction accepts only approved context.
+- Gate decisions and receipts persist through Sibyl.
+- Existing backend behavior remains intact.
+
+### Explicit non-goals
+
+No login, replacement scenarios, LLM calls, UI redesign, live ACP/Base action, second provider, or general IAM system.
 
 ### Exit gate
 
-Phase 1 passes when all core schema, signature, workflow-validation, and approval-value tests pass without Sibyl, ACP, or Base dependencies, and the public engine path proves both an accepted valid case and rejected invalid or changed-input cases. No test success may come from an unlabelled fixture or a bypass around the engine.
+Process A persists Agent A work and exits. Process B starts with a distinct Agent B session, recalls the work from Sibyl, produces at least one `reuse` and one `blocked` result, and constructs approved context that provably excludes blocked content.
 
-## Phase 2: Sibyl authoritative persistence
+## Phase 2: Demo identity, workspace and scenario isolation, scenarios, and reset
 
-### Goal
+### Objective
 
-Make persistent work lookup and recovery depend on real Sibyl Memory.
+Build trustworthy demo state and the three shared-architecture scenarios before real LLM execution or major visual work.
 
-### Work
+### Major files and subsystems
 
-1. Confirm exact current Python SDK methods and tenant selection behavior.
-2. Implement the Sibyl-backed store according to the tier mapping in `MASTER_PLAN.md`.
-3. Persist:
-   - reusable work results
-   - attempts
-   - active step heads
-   - revision plans
-   - concise transition journal events
-4. Ensure large fixture artifacts are stored outside Sibyl with references and content hashes.
-5. Ensure removal of the Sibyl store prevents cross-process reuse and recovery.
-6. Add project isolation to every key.
+- `delta/demo.py`, `delta/fixtures.py`, `delta/store.py`, and `delta/web.py`
+- New scenario, session, and reset modules
+- Web and integration tests
+
+### Required work
+
+- Add fixed public login, Delta Dave identity, signed session, sign out, and per-session CSRF.
+- Generate a server-controlled workspace per browser.
+- Add the AI software-work, home repair, and paid research scenario registry.
+- Scope state by workspace, scenario, and generation.
+- Initialize each scenario on first open through the engine and Sibyl.
+- Refine AI software-work items against Phase 1 contracts.
+- Add input-sensitive, clearly labelled deterministic scenario services.
+- Add Reset Demo with a project-scoped manifest.
+- Verify official Sibyl deletion behavior and use deletion or generation rotation accordingly.
+- Reject stale identities and keep live paid actions inaccessible to public sessions.
 
 ### Required tests
 
-- write and read reusable result
-- write and read attempt
-- current active-attempt recovery
-- journal event append
-- two project IDs cannot cross-reuse
-- missing artifact invalidates reuse according to policy
-- real fresh Python process restores the same work from the same Sibyl memory path
-- removing or disconnecting a disposable Sibyl test store prevents restoration and proves no hidden application database can reconstruct the authoritative state
+- Login, failed login, sign out, and session expiry
+- Public denial of live actions
+- Two browsers receive separate workspaces and cannot cross-read or cross-reuse
+- Three scenarios remain isolated
+- Reset affects only one workspace and scenario
+- Concurrent resets are serialized or rejected safely
+- Old generations and plans return stale-state responses
+- A fresh process restores the active workspace and scenario from Sibyl
 
-### Restart test
+### Acceptance criteria
 
-Use a parent test or script that:
+Concurrent judges cannot see or mutate one another's work. Reset semantics are exact and honest. All scenarios use the same gate and receipt model. The public account has no path to spending authority.
 
-1. starts process A
-2. executes deterministic workflow and exits
-3. starts process B with fresh application objects
-4. reconnects to the same Sibyl memory
-5. plans the unchanged request
-6. proves zero fixture service calls are made in process B
+### Explicit non-goals
 
-Browser local storage or module globals do not count.
-
-### Critical-path deletion test
-
-Use a disposable Sibyl store created only for this test:
-
-1. complete the restart test successfully
-2. stop every test process using that store
-3. remove the disposable store or make it unavailable
-4. start process C with fresh application objects
-5. verify that prior work results, plans, attempts, and active-job identity cannot be restored
-6. verify that no separate application database or local cache reconstructs the missing authoritative state
-
-Never run this test against shared Sibyl data, user credentials, or a non-test memory path.
+No real LLM, second provider, major landing redesign, live paid execution, user database, signup, or distributed multi-writer guarantee.
 
 ### Exit gate
 
-Phase 2 passes only when both the real process-restart test and the disposable-store deletion test pass through fresh application processes. Sibyl must be demonstrably authoritative for cross-process reuse and recovery, and the deletion or unavailable-store case must fail honestly rather than restore a predetermined success.
+Login, workspace isolation, scenario isolation, reset, stale-generation, concurrent-judge, no-spend, and fresh-process tests pass through the real Sibyl path.
 
-## Phase 3: Revision planner and runtime downstream reevaluation
+## Phase 3: Agent sessions, approved-context LLM execution, and Reuse Receipts
 
-### Goal
+### Objective
 
-Complete the revision semantics that distinguish preview-time uncertainty from final runtime reuse.
+Add one real LLM provider with distinct Agent A and Agent B sessions, then connect approved context, missing-work execution, and receipts.
 
-### Work
+### Major files and subsystems
 
-Implement preview logic for:
+- New provider-neutral `delta/agents` boundary
+- Handoff gate and context assembly
+- `delta/execute.py`, scenario definitions, `delta/web.py`, receipt serialization, and tests
 
-- `reuse`
-- `rerun`
-- `pending_dependency`
+### Required work
 
-Implement structured reasons and cost placeholders.
-
-Implement execution scheduling for ready steps.
-
-Implement the single-writer boundary with an in-process lock around execution decisions and attempt creation. An existing active or ambiguous attempt for the same project, workflow, step, and desired input signature must block duplicate execution.
-
-Implement cost aggregation so reused work contributes zero additional service cost, known rerun estimates are summed, and any unknown estimate remains explicitly unknown. Keep estimate, provider quote, actual service cost, and network gas separate.
-
-After every completed upstream execution:
-
-1. persist the successful result
-2. recompute newly ready downstream effective inputs
-3. recompute signatures
-4. look for matching reusable work
-5. either reuse or execute
+- Define an `AgentRunner` interface and persist distinct sessions.
+- Send only `ApprovedContext` to the provider.
+- Validate and persist outputs without treating them as trusted instructions.
+- Record provider, model, session, usage, and cost only when supported by the response.
+- Execute missing work through declared workflows.
+- Finalize the Reuse Receipt from actual decisions and outcomes.
+- Keep deterministic and real-provider modes separate and preserve unknown cost as unknown.
 
 ### Required tests
 
-1. Unchanged request.
-   - all reused
-   - zero additional fixture calls
-2. Launch date only.
-   - visual reused
-   - announcement reruns
-   - translation pending before announcement finishes
-   - translation reruns only when actual announcement output changes
-3. Visual brief only.
-   - visual reruns
-   - announcement and translation reused
-4. Product description change.
-   - visual and announcement rerun
-   - translation reevaluated after announcement
-5. Expired result.
-   - expired step reruns
-   - independent step remains reusable
-6. Implementation/version change.
-   - target step reruns
-   - downstream reevaluated from actual output
-7. Upstream rerun with unchanged output.
-   - upstream executes
-   - downstream reuses existing valid result
-8. Failed step and retry.
-   - failed attempt recorded
-   - no failed output becomes reusable
-   - independent valid results remain reusable
-9. Project isolation.
-   - identical requests under two projects do not cross-reuse
-10. Cost and reason semantics.
-   - reused work contributes zero additional service cost
-   - known rerun estimates are included once
-   - an unknown rerun estimate is not displayed or aggregated as zero
-   - estimate, provider quote, actual service cost, and gas remain separate values
-   - stable reason codes accompany every decision
-11. Single-writer execution.
-   - two concurrent requests for the same desired step input produce one fixture executor call
-   - the second request observes the active attempt instead of creating another attempt
-   - different independent steps can still progress according to the scheduler
+- Distinct Agent A and Agent B session identities
+- Sentinel blocked values absent from prompts, messages, tool arguments, logs, traces, and unauthorized browser payloads
+- Approved work reaches Agent B and affects its result
+- Failed LLM output never becomes reusable
+- Changed input or policy makes a gate result stale
+- Receipt entries match persisted attempts
+- Fixture and real modes cannot be confused
+
+### Acceptance criteria
+
+One provider supports separate sessions. Blocked work is excluded before provider request construction. Missing work uses the engine, not scenario shortcuts. The receipt is reproducible from persisted state.
+
+### Explicit non-goals
+
+No second provider, broad policy language, public paid execution, or major visual redesign before contracts stabilize.
 
 ### Exit gate
 
-Phase 3 passes when all required deterministic revision tests pass through the real Sibyl store, including unchanged, changed-input, rerun, pending-dependency, failed, and blocked outcomes. The results must be derived from the planner and persisted state, not hardcoded scenario responses.
+An end-to-end test and inspectable provider request prove that Agent B received approved work, never received blocked work, executed only missing work, and produced a receipt consistent with Sibyl.
 
-## Phase 4: ACP adapter contract and reconciliation with fixtures
+## Phase 4: Application UX and landing-page redesign
 
-### Goal
+### Objective
 
-Implement paid-job continuity safely before any live spending.
+Replace the revision-centric launch-package experience with the handoff journey and a deliberate Delta-specific neo-brutalist landing story.
 
-### Work
+### Major files and subsystems
 
-Build a narrow ACP CLI runner that:
+- Templates, application and landing JavaScript, CSS, static assets, routes, and web tests
 
-- invokes an executable with argument arrays
-- never uses shell interpolation
-- requests JSON output
-- captures stdout/stderr safely
-- redacts known sensitive values
-- applies timeouts
-- distinguishes command failure from ambiguous external outcome
+### Required work
 
-For live job creation, start and maintain the ACP event listener required by the current client workflow before creating a job. Do not use that listener as the only recovery source. Persist Delta attempt state immediately and reconcile with ACP job history or status after restart.
+- Center the app on scenario selection, Agent A work, session end, Agent B start, gate decisions, execution, result, and receipt.
+- Put work, consequences, and decisions before infrastructure.
+- Place signatures, Sibyl identity, policy, provider, ACP job, Base, and cost evidence behind progressive disclosure.
+- Render every state from backend data.
+- Build the landing story around Agent A, the boundary, Agent B, approved work crossing, blocked work stopping, and the receipt.
+- Use structural rules, offsets, stamps, and high-contrast typography to explain causality.
+- Keep the application quieter than marketing and use a vertical sequence on mobile.
 
-Build provider-neutral ACP adapter methods for:
+### Required tests and review
 
-- browse/discover
-- inspect offering
-- create job
-- query job history/status
-- wait/watch when appropriate
-- fund
-- obtain deliverable
-- complete
-- reject
-- reconcile
+- Complete fixture handoff journey
+- Login, sign out, reset, and stale-session behavior
+- Loading, empty, blocked, unauthorized, pending, ambiguous, recovery, reset, and failure states
+- Keyboard operation, focus, announcements, contrast, reduced motion, and touch targets
+- Responsive inspection at 1440, 1024, 768, and 390 CSS pixels
+- No overflow or unsupported savings, provider, transaction, or security claims
+- Evidence surfaces never expose blocked content
 
-Create sanitized fixture JSON for each relevant ACP lifecycle state.
+### Acceptance criteria
 
-Persist intent before any simulated side-effecting action.
+A first-time visitor can explain what crossed the handoff and why. Navigation serves the product journey. Approved work visibly crosses and blocked work stops. Every displayed success, cost, and evidence item comes from backend state.
 
-Before simulated create, fund, or complete actions, validate the stored approval against the persisted plan and current provider state. Check project and plan identity, allowed steps, provider and offering, chain, action scope, expiration, currency, maximum total service spend, and any per-job cap. A changed spend-relevant plan requires a new approval.
+### Explicit non-goals
 
-Track approved and committed service spend per plan so several individually valid jobs cannot exceed the total cap.
-
-Reject malformed JSON, unexpected response structures, unsupported lifecycle values, and deliverables that fail their expected schema. Preserve enough failure classification for reconciliation without storing secrets.
-
-Treat provider deliverables and references as untrusted. Validate generated artifact paths and, when remote downloads are enabled, validate URL scheme, destination, redirects, content type, response size, and content hash before marking an artifact available.
-
-### Reconciliation rules to implement
-
-Known job ID:
-
-- query existing job first
-- never create replacement while nonterminal
-- map `open`, `budget_set`, `funded`, `submitted`, `completed`, `rejected`, `expired`
-
-Unknown job ID after ambiguous create:
-
-- attempt discovery only if current APIs expose enough identity fields
-- bind automatically only when exactly one job is unambiguously matched
-- otherwise enter `reconciliation_required`
-
-### Required tests
-
-- normal job lifecycle fixture
-- quote above approval blocks funding
-- expired approval blocks create, fund, and complete actions
-- changed plan or mismatched project, step, provider, offering, chain, currency, or action scope blocks the paid action
-- cumulative committed service spend cannot exceed the plan cap across several jobs
-- unavailable or differently denominated quotes require a new approval
-- process restarts with known funded job and resumes reconciliation
-- command timeout with known job ID does not create replacement
-- concurrent submissions for the same desired input invoke the simulated provider create action once
-- ambiguous create with zero matches blocks retry
-- ambiguous create with multiple matches blocks retry
-- ambiguous create with one verified match resumes the matched job
-- ambiguous fund reconciles before any second fund attempt
-- ambiguous complete reconciles before any second settlement attempt
-- rejected and expired jobs do not become reusable results
-- submitted deliverable is not silently treated as completed settlement
-- malformed JSON, unexpected schema, and unsupported lifecycle values fail closed
-- nonzero exit, timeout, parse failure, and ambiguous external outcome remain distinguishable
-- secret-like fixture values are redacted from logs and error payloads
-- provider filenames and project IDs cannot escape the generated artifact root
-- unsafe remote URLs, redirects, media types, and oversized responses are rejected when remote retrieval is enabled
+No gate changes for visual convenience, weakened persistence or spending controls, decorative terminal, node graph, metric wall, random bright blocks, generic gradients, glass-card system, or live claim based on recorded evidence.
 
 ### Exit gate
 
-Phase 4 passes when clearly labelled fixture tests exercise the adapter contract and prove approval scope and cap enforcement, single-writer attempt creation, hostile-output handling, safe artifact resolution, conservative candidate matching, and money-sensitive reconciliation behavior. The evidence must include a positive lifecycle, a changed or conflicting provider response, and fresh-process recovery of persisted job identity. Each success and failure must be derived from the fixture response through the adapter path, and no fixture may be presented as live ACP evidence. No live transaction may have been sent. Live marketplace response verification remains a separate readiness record and must not be replaced by fixtures.
+The full handoff experience passes functional, accessibility, responsive, and evidence-integrity review across all scenarios.
 
-## Phase 5: Branded demonstration workspace
+## Phase 5: Operator-gated live ACP/Base proof and submission hardening
 
-### Goal
+### Objective
 
-Expose the deterministic engine and reconciliation states clearly before live partner execution.
+Close the live paid path safely and connect genuine evidence to a later authorized handoff. Preserve the exact blocker if it cannot be verified.
 
-### Work
+### Major files and subsystems
 
-Create a focused product workspace using the repository's existing web stack or the server-rendered approach from `MASTER_PLAN.md`. Provide a public product entry point and real application routes for distinct operational tasks. Navigation must change the current page rather than scrolling through one long dashboard.
-
-Keep revision logic in the engine. Validate project scope and action prerequisites on the server for every read and state-changing request. Render user and provider content as escaped text. If the interface is exposed beyond localhost, add CSRF protection appropriate to the selected stack.
-
-When live ACP or Base dependencies are unavailable, the local interface may use the explicitly labelled deterministic fixture path to verify planner, persistence, changed-input, error, and unavailable-action behavior. Fixture mode must remain visibly distinct from live integrations, must not show live provider or transaction success, and cannot satisfy the live provider, approval, reconciliation, or settlement portions of this gate.
-
-Required UI:
-
-- project ID
-- four workflow inputs
-- preview action
-- three workflow steps
-- decision and reason per step
-- estimated cost or unknown
-- current output
-- provider/job fields when available
-- actual cost separate from estimate
-- execute action
-- explicit spending confirmation surface
-- reconcile action
-- settlement approval action
-- restart recovery banner/state
-- source timestamps, chain, units, and freshness where they affect interpretation
-
-Required visual states:
-
-- idle
-- preview loading
-- reuse
-- rerun
-- pending dependency
-- awaiting approval
-- awaiting quote
-- funded/awaiting provider
-- deliverable ready
-- awaiting settlement
-- complete
-- failure
-- expired
-- rejected
-- ambiguous
-- reconciliation required
-- artifact unavailable
-
-Do not invent progress percentages.
-
-### Accessibility and responsive requirements
-
-- keyboard-accessible controls
-- visible focus states
-- semantic labels and status text, not color-only communication
-- associated labels, inline field errors, and a focusable error summary after failed submission
-- async status updates announced without moving focus during ordinary progress
-- user input preserved across recoverable errors and reconciliation attempts
-- paid and settlement actions visually and semantically distinct from read-only actions
-- disabled actions explain the unmet prerequisite
-- touch targets and spacing suitable for mobile use
-- reduced-motion behavior for nonessential transitions
-- readable at 375, 768, 1024, and 1440 CSS pixel widths without unintended horizontal scrolling
-- long job IDs and hashes wrap without breaking layout
-- live state updates use appropriate accessible status regions
-
-### Exit gate
-
-Phase 5 passes only when:
-
-- the full deterministic revision and restart flow can be demonstrated from the UI using real Sibyl persistence
-- the UI result for each demonstrated capability is derived from the API, engine, and persistence path that produced it
-- every required visual state is exercised through labelled deterministic fixtures or real state transitions
-- at least one changed-input or negative action produces an honest rerun, error, unavailable, blocked, or reconciliation state where applicable
-- preview, execute, reconcile, approval, and settlement actions are enabled only in valid states
-- a keyboard-only pass completes the primary workflow and reaches all recovery actions
-- validation errors are announced, focus is moved to the error summary after failed submission, and field input is preserved
-- the page is inspected at 375, 768, 1024, and 1440 CSS pixel widths for overflow, wrapping, hierarchy, touch access, and action reachability
-- visible focus, contrast, status announcements, and reduced-motion behavior are verified
-- cross-project requests and invalid action-state requests are rejected by the server
-- user and provider content is rendered as escaped text, and state-changing requests have appropriate CSRF protection when exposed beyond localhost
-- no dead control, placeholder link, fake progress, unsupported claim, or provider-supplied HTML remains
-
-The Phase 5 status is `Partially complete` when the local fixture-backed interface and its real Sibyl path are verified but live provider, approval, reconciliation, or settlement states remain unverified. Do not promote the phase to `Verified` from screenshots, fixture output, or a happy-path response alone.
-
-## Phase 6: Fair LangGraph baseline
-
-### Goal
-
-Validate claims against ordinary correctly configured caching and persistence.
-
-### Work
-
-Build a separate comparison harness using current LangGraph APIs.
-
-The current harness lives in `delta/baseline.py` and is installed through the optional `baseline` dependency group. It uses SQLite-backed LangGraph cache and checkpoint implementations so the comparison can measure real cache hits, TTL expiry, project isolation, and fresh-process recovery without making LangGraph a Delta runtime dependency.
-
-Configure:
-
-- relevant node inputs only
-- custom cache identity where required
-- equivalent TTL
-- project scope
-- implementation version identity
-- persistent checkpointer/cache for restart comparison when supported
-
-Compare at least:
-
-- unchanged request
-- launch date only
-- visual brief only
-- product description change
-- expired result
-- implementation change
-- upstream rerun with unchanged output
-- restart
-
-Record factual call counts and behavior.
-
-Assess what Delta adds in practice:
-
-- pre-execution plan explanations
-- persisted paid-work provenance
-- provider job lifecycle continuity
-- cost quote and approval state
-- conservative reconciliation behavior
-- developer code required to obtain the same experience
-
-Do not claim node-level selective execution as unique.
-
-### Exit gate
-
-Phase 6 passes when the comparison is reproducible from the public harness, includes unchanged and changed or negative cases, and README language can state the overlap honestly. Measured results must come from executed comparison paths rather than predetermined counts.
-
-## Phase 7: Live Virtuals ACP and Base integration
-
-### Goal
-
-Exercise genuine service work and real onchain settlement without exceeding approved scope.
+- `delta/providers/acp.py`, `delta/artifacts.py`, operator tooling, live finalization, receipt evidence, demo runbook, and submission tests
 
 ### Preconditions
 
-All prior phases must pass.
+- Phases 1 through 4 passed.
+- Existing nonterminal or ambiguous ACP work is reconciled.
+- Provider, offering, requirements, deliverable, SLA, price, and Base support are refreshed through read-only discovery.
+- The user explicitly approved the chain, provider, offering, transaction types, service cap, and action scope.
+- Public demo sessions cannot satisfy operator authorization.
 
-The user must approve:
+### Required work
 
-- exact provider and offering
-- chain
-- maximum service spend
-- wallet funding requirement if any
-- which actions may broadcast
-- whether settlement approval will be a separate confirmation
+- Run one suitable paid research or content job through Delta's real adapter.
+- Persist intent and job identity at the earliest safe boundary.
+- Reconcile before retrying an ambiguous action.
+- Verify deliverable shape, artifact, provider hash, settlement receipt, and Base evidence.
+- Create reusable work only through `ACPAdapter.finalize_completed_work` or its verified successor.
+- Restore the completed work in a fresh process and evaluate it for Agent B.
+- Purchase only genuinely missing work under a new explicit approval.
+- Add real, sanitized evidence to the receipt and complete secret, version, claim, and evidence audits.
 
-If the submission claims the Base partner stack, confirm that the selected deployment meets the current eligibility floor before live evidence is captured.
+### Required tests and evidence
 
-Do not start this phase without explicit approval.
+- Public-session denial for every live action
+- Quote-over-cap, wrong-chain, wrong-provider, expired-approval, and cumulative-cap rejection
+- Ambiguous create, fund, and completion reconciliation
+- Artifact unavailable and hash mismatch
+- Fixture or recorded evidence cannot create reusable live work
+- Fresh-process paid-work recall
+- Unauthorized paid work stays out of Agent B context
+- Receipt separates estimate, quote, actual service cost, gas, and hypothetical avoided cost
 
-Read-only Phase 7 preflight is allowed before that approval. It may refresh the authenticated identity, signer policy, marketplace offerings, and response shapes, but it must stop before job creation, funding, settlement, or any other broadcast action.
+### Acceptance criteria
 
-A no-spend observation may parse and persist a live ACP response through the
-adapter's attempt and journal boundary. That observation is not a completed
-work result, does not make an artifact reusable, and does not satisfy the live
-Phase 7 exit gate until Delta's real job, artifact, persistence, and Base paths
-have been exercised end to end.
+A real paid ACP result is settled, verified, persisted in Sibyl, recalled by a fresh process, evaluated for a different receiving agent, and reused only when authorized. Only missing work is eligible for purchase. If the live path is blocked, the product reports that honestly.
 
-Read-only ACP history and protocol-level deliverable hash verification may
-strengthen the evidence record, but they do not replace a live Delta execution,
-settlement ingestion, artifact persistence, or fresh-process reusable-work
-check.
+### Explicit non-goals
 
-### Work
-
-1. Re-run read-only offering discovery immediately before spending.
-2. Confirm price, SLA, requirements, deliverable, chain, and online status.
-3. Create a live revision plan and store it in Sibyl.
-4. Record the approved cap.
-5. Start and verify the required ACP event listener before creating the job. Persist its local event file outside source control if the selected CLI flow uses one.
-6. Create the ACP job on Base only within the approved action scope.
-7. Persist job ID and transaction identity immediately when available.
-8. Reconcile until quote is available.
-9. Compare quote with approval.
-10. Fund only when within cap and approved.
-11. Persist funding evidence.
-12. Reconcile until deliverable is submitted.
-13. Validate and safely ingest the deliverable.
-14. Require settlement approval according to the approved scope.
-15. Complete and verify terminal job state.
-16. Verify Base transaction receipt evidence independently where possible.
-17. Persist actual known service cost and gas evidence separately.
-18. Restart the Delta process and prove the completed work and job history restore from Sibyl.
-19. Run a revision that reuses at least one paid result and reruns at least one affected step when budget permits.
-
-If job creation succeeds but the provider rejects the requirement envelope or
-does not expose a budget, persist the known job identity and leave the attempt
-active or blocked. Do not fund an `open` job, infer a budget from the browse
-price, create a replacement, or mark the live path verified.
-
-The adapter's reusable-work boundary is explicit. A completed ACP status cannot
-create a `WorkResult` by itself. Finalization requires matching persisted job
-identity and requirements, an independently verified provider deliverable hash,
-a successful settlement receipt on the job chain, and an `AVAILABLE`
-`ArtifactResolution` from the bounded artifact store. Recorded fixtures cannot
-cross this boundary.
-
-### Interrupted-job demonstration
-
-If safe and practical, perform a controlled process stop after a known job ID has been persisted, then restart and reconcile the same job. Do not intentionally create an ambiguous payment state for a live wallet merely to demonstrate failure handling.
-
-The ambiguous path can remain fixture-tested if deliberately inducing it would risk duplicate spend.
+No autonomous buyer, public spending control, unrelated Base transaction, custom contract, custom escrow, exactly-once claim, or second LLM provider without separate approval.
 
 ### Exit gate
 
-Phase 7 passes only when:
+The paid-to-reusable-to-authorized-handoff path is verified end to end with explicit approval and reproducible evidence, or Phase 5 is recorded as blocked and public claims remain limited to proven behavior.
 
-- at least one genuine ACP service job completes
-- a genuine deliverable is captured
-- actual onchain Base payment or settlement is evidenced
-- Sibyl restores the real job/work record after restart
-- actual known costs are recorded honestly
-- no unapproved spend occurred
-- the displayed provider, job, deliverable, cost, and chain states are derived from the real ACP and Base responses, not fixtures or constants
+## Global verification matrix
 
-If Base partner qualification requires an additional distinct action, execute it only after separate explicit approval.
+Before submission verify unchanged and changed work, expired work, valid but unauthorized work, unavailable artifacts, upstream rerun with unchanged output, pending dependencies, failed work and retry, fresh-process restoration, project/scenario/browser isolation, reset and stale generations, policy leakage prevention, ACP reconciliation, ambiguous-outcome blocking, spending limits, honest evidence classification, and responsive accessible UI behavior.
 
-## Phase 8: Submission hardening and evidence
+## Stop conditions
 
-### Goal
-
-Make the repository reproducible, honest, and judge-ready.
-
-### Work
-
-1. Run the full automated test suite from a clean environment.
-2. Run the restart test again.
-3. Run the baseline comparison.
-4. Verify secrets are absent from repository history and fixtures.
-5. Verify generated artifacts and memory databases are excluded from source control unless intentionally sanitized.
-6. Update README with:
-   - implemented capabilities only
-   - exact setup
-   - exact run commands
-   - Sibyl critical read/write paths
-   - deletion-test explanation
-   - Virtuals and Base integration paths
-   - prior-work declaration
-7. Update `REFERENCES.md` with pinned versions actually used.
-8. Update `STATE.md` with final verified and blocked items.
-9. Execute `DEMO_RUNBOOK.md` from start to finish.
-10. Capture exact evidence required by the runbook.
-11. Confirm repository has an OSI-approved license. Preserve an existing compliant license. If none exists, use Apache-2.0 unless the user specifies another approved license.
-12. Confirm public repository, demo-video, deployment, and partner-evidence requirements from the current hackathon submission page.
-
-### Exit gate
-
-The project is submission-ready only when every minimum-complete-submission item in `MASTER_PLAN.md` is either verified with end-to-end evidence or explicitly blocked with the user aware that the submission is incomplete. No fixture, mocked response, placeholder, or predetermined result may be presented as live evidence. A passing test that seeds recorded values, a local restart check against a pre-populated database, or an ignored evidence directory does not satisfy the live integration gate. Evidence referenced by README must be sanitized and tracked, or reproducible from documented public inputs.
-
-## Global acceptance criteria
-
-The finished system must be able to prove:
-
-- revision decisions are deterministic and explainable
-- work survives a real process restart because Sibyl restores it
-- a changed independent input does not rerun unrelated work
-- a changed upstream output invalidates downstream effective input
-- an unchanged upstream output can preserve downstream reuse even after upstream execution
-- failed attempts never masquerade as reusable successes
-- project scopes are isolated
-- provider job identity survives restart
-- an existing or ambiguous paid job is reconciled before replacement
-- estimates, quotes, actual service cost, and gas evidence are distinct
-- approval identity, scope, expiration, per-job cap, and total spending limits are enforced
-- simultaneous local execution requests cannot create duplicate attempts for the same desired paid work
-- removing the disposable Sibyl test store prevents authoritative cross-process recovery
-- malformed provider output and unsafe artifact references fail closed
-- genuine ACP and Base integrations are exercised in the completed submission
-- baseline claims are accurate
-
-## Genuine blockers that justify stopping
-
-Stop the affected phase when:
-
-- live ACP service discovery produces no suitable safe offering
-- ACP authentication/signer setup cannot be completed
-- provider price or chain differs from approved scope
-- a job outcome is ambiguous and cannot be safely reconciled
-- the Base action needed for the submission cannot be verified
-- Sibyl APIs cannot represent authoritative work state within practical limits
-- security constraints conflict with a required provider deliverable format
-- the repository's existing architecture makes the planned destination ambiguous and there is no safe default
+Stop the active phase if Sibyl cannot remain authoritative, safe reset semantics cannot be achieved, blocked content cannot be proven absent from provider requests, a provider contract risks funds or state, ACP identity remains ambiguous, a transaction is outside approval, no suitable paid offering exists, Base evidence cannot be verified, or public demo access can reach valuable authority.

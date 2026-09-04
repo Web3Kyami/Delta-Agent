@@ -278,7 +278,9 @@ Demo evidence should show public transaction/job identifiers only.
 - use `rel="noopener noreferrer"` for external links
 - apply a restrictive Content Security Policy if practical
 
-The initial local demo should avoid adding authentication unless deployment requires it.
+The trusted-handoff public demo uses one fixed, visibly supplied credential as guided entry, not as production authentication. It requires signed, HttpOnly, SameSite sessions, per-session CSRF protection, and isolated server-controlled workspace identities. The public credential must never authorize live ACP spending, wallet actions, funding, completion, settlement, or other valuable permissions.
+
+Delta must enforce inheritance policy before constructing an LLM prompt, message, tool argument, trace, or provider request. Blocked work content must not be exposed to the receiving model and must not leak through receipt summaries, logs, errors, or unauthorized browser payloads.
 
 ## Dependency and supply-chain safety
 

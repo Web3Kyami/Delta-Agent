@@ -1,28 +1,21 @@
 # Delta
 
 > Working-name project for the Sibyl Labs hackathon.
-> **Deterministic revision planning with a recorded ACP and Base integration audit.**
+> **Transitioning to trusted handoff for agent work.**
 
-Delta is a developer library for revising paid agent work. Given a completed
-workflow and a revised request, Delta tells you:
+Delta's approved direction is a trusted handoff layer for agent work:
 
-- what completed work remains reusable
-- what needs another execution
-- what must wait for an upstream result
-- why each decision was made
-- the known or estimated additional service cost before execution
-- the identity and state of existing paid agent jobs
-- whether an interrupted job must be reconciled before a replacement can be created
+> Agents can inherit previous work without inheriting everything.
 
-Delta does not claim a new caching algorithm — mature workflow systems already
-provide input-based caching, selective execution, TTL policies, and persistence.
-Delta's contribution is the integrated developer experience around revision
-planning, persistent paid-work records, cost/approval state, and continuity of
-external paid agent jobs.
+Agent A completes work and Sibyl persists it. When Agent B begins later, Delta will recall candidate work and deterministically evaluate validity, trust, authorization, dependencies, and external-job safety before constructing Agent B's context. Approved work may cross the handoff. Blocked work must stay outside the receiving model's prompt. Missing work executes, and a Reuse Receipt explains the outcome.
+
+This trusted-handoff functionality is approved but not implemented yet. The current repository contains the reusable backend machinery and a legacy launch-package revision demonstration that will be migrated through `IMPLEMENTATION_PLAN.md`.
 
 ## Status
 
-**Current status: Phases 1–6 are verified. Phase 7 has live read-only ACP history and provider-deliverable hash integrity verified, plus a safe observation boundary, but Delta's paid execution-to-reusable-work path is not verified. Submission readiness is blocked pending the audit actions recorded in `STATE.md`.**
+**Current status: the trusted-handoff roadmap is approved and implementation has not begun. The existing backend remains verified, while the current launch-package product surface is legacy. The next task is Phase 1 of the new roadmap only.**
+
+### Current capabilities
 
 Implemented and verified:
 
@@ -30,12 +23,22 @@ Implemented and verified:
 - **Phase 2**: Sibyl Memory persistence (entities + journal + artifact references)
 - **Phase 3**: deterministic execution engine, attempt lifecycle, blocked/failure states
 - **Phase 4**: no-spend Virtuals ACP adapter (read-only history, JSON CLI, reconciliation)
-- **Phase 5**: public product site and route-based local operations workspace (`run_demo.py` → `http://127.0.0.1:8000`)
+- **Legacy Phase 5**: public product site and route-based local launch-package workspace (`run_demo.py` at `http://127.0.0.1:8000`)
 - **Phase 6**: LangGraph comparison baseline (overlap measured, not claimed novel)
 - **Phase 7**: live Aaga ACP history and Base transaction evidence, with the paid execution-to-reusable-work gap documented rather than claimed as complete.
 
-The Python test suite is **73 passed, 15 subtests passed**. See
+The Python test suite baseline is **74 passing tests**, verified on 2026-09-04. See
 `STATE.md` for verified facts, onchain evidence, and the next action.
+
+### Approved migration direction
+
+- Phase 1: handoff contracts and deterministic policy gate
+- Phase 2: demo identity, workspace and scenario isolation, scenarios, and reset
+- Phase 3: distinct agent sessions, approved-context LLM execution, and Reuse Receipts
+- Phase 4: handoff-first application and Delta-specific neo-brutalist landing redesign
+- Phase 5: operator-gated live ACP/Base proof and submission hardening
+
+The primary scenario will be AI software-work handoff. Home repair handoff will provide the general-audience explanation, and paid research handoff will carry the ACP/Base and economic-reuse story. One LLM provider comes first; a second provider is deferred. Public demo login will remain completely separate from live spending authority.
 
 The latest approved live validation created Aaga ACP job `75773` on Base
 `8453`, but the provider rejected the CLI-generated requirement envelope and
@@ -113,15 +116,17 @@ It measures a correctly configured SQLite cache and checkpoint path against the 
 deterministic workflow inputs. The measured overlap is evidence that selective reuse, TTL,
 and restart persistence are not unique Delta features.
 
-## Initial demonstration workflow
+## Legacy demonstration workflow
 
-The first workflow is a launch package:
+The currently implemented local workflow is a launch package:
 
 1. Product visual from product description and visual brief.
 2. Announcement from product description and launch date.
 3. Translation from announcement output and target language.
 
 Dependencies are explicit. Translation depends on the actual announcement output.
+
+This workflow and its product surface are legacy migration material. They remain available only to document and verify the existing engine until the approved handoff scenarios replace them in later phases.
 
 Example revision behavior:
 
@@ -184,7 +189,7 @@ See `MASTER_PLAN.md` for the complete architecture.
 
 ## Product interface
 
-The public site explains the product through an interactive, clearly illustrative revision example and leads to the working launch-package workspace. The application uses separate routes for Overview, Revisions, Runs, Continuity, and Integrations. Navigation changes the current page instead of scrolling a long dashboard.
+The currently implemented legacy public site explains revision planning through an illustrative example and leads to the launch-package workspace. The application uses separate routes for Overview, Revisions, Runs, Continuity, and Integrations. These routes and this composition will be replaced during the approved handoff migration and are not requirements for the future product.
 
 The revision API response drives the plan, summary metrics, run state, and continuity results. Storage and provider implementation details stay on the Integrations page or inside technical evidence rather than appearing throughout the normal workflow.
 

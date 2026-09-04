@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Delta is a reusable execution library for revising paid agent work. It lets a developer preview what completed work remains reusable, what must run again, why, and what the additional work is expected to cost before execution. It also preserves paid-job identity so interrupted jobs are reconciled before a replacement can spend again.
+Delta is a trusted handoff layer for agent work. It lets Agent B inherit only the previous work that Delta deterministically finds valid, trustworthy, authorized, dependency-safe, and externally safe. It also preserves paid-job identity so interrupted jobs are reconciled before a replacement can spend again.
 
 This file is the operational instruction set for builders. Stable product and architecture requirements live in `MASTER_PLAN.md`. Ordered work and exit gates live in `IMPLEMENTATION_PLAN.md`. Live progress and blockers live in `STATE.md`.
 
@@ -24,13 +24,9 @@ Then inspect all other applicable repository instructions, including nested `AGE
 
 ## Non-negotiable scope
 
-Build the reusable Delta engine first. The launch-package web interface is only a demonstration.
+Build the trusted-handoff contracts and deterministic pre-prompt gate before demo identity, LLM integration, or interface redesign. Follow the five migration phases in `IMPLEMENTATION_PLAN.md`.
 
-The initial workflow is:
-
-- Product visual: product description + visual brief.
-- Announcement: product description + launch date.
-- Translation: announcement output + target language.
+The existing launch-package workflow is legacy implementation history, not the approved product direction. New scenarios are AI software-work handoff, Home repair handoff, and Paid research handoff. Do not implement them before their assigned phase.
 
 Dependencies are declared by developers. Never ask an LLM to infer the graph or relevant inputs.
 
@@ -208,10 +204,12 @@ The demonstration should make the engine behavior obvious rather than looking li
 
 It must expose:
 
-- editable workflow inputs
-- revision preview for each step
-- reuse, rerun, or pending dependency
+- Agent A's completed work and ended session
+- Agent B's distinct receiving session
+- candidate recall and pre-prompt gate decisions
+- reuse, blocked, rerun, pending dependency, and reconciliation states
 - a concrete reason beside each decision
+- a Reuse Receipt
 - estimated additional cost where known
 - actual cost separately after execution
 - provider and job status for paid work
@@ -225,10 +223,10 @@ Use real loading, error, blocked, and restart-recovery states. Never show fake p
 
 At minimum verify:
 
-- unchanged request
-- launch-date-only change
-- visual-brief-only change
-- shared product-description change
+- unchanged candidate work
+- changed requirement or implementation constraint
+- valid but unauthorized work
+- blocked content never reaches Agent B context
 - expired result
 - implementation/version change
 - failed step and retry
@@ -239,6 +237,8 @@ At minimum verify:
 - ambiguous ACP submission that cannot be safely retried
 - spending approval limit enforcement
 - artifact unavailable handling
+- browser workspace and scenario isolation
+- Reset Demo and stale generation handling
 
 The baseline comparison must use correctly configured LangGraph caching and persistence. Its purpose is to keep product claims honest, not to force Delta to invent a new caching mechanism.
 

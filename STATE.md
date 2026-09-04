@@ -1,6 +1,35 @@
 # Delta State
 
-## 2026-09-03 application redesign
+Last updated: 2026-09-04 (trusted-handoff direction approved)
+
+## Current direction
+
+- Delta is now defined as a trusted handoff layer for agent work: agents can inherit previous work without inheriting everything.
+- The approved flow is Agent A completion, Sibyl persistence, Agent A session end, later Agent B session, deterministic validity/trust/authorization/dependency/external-job gating, approved-context construction, missing-work execution, and a Reuse Receipt.
+- The previous launch-package and revision-centric product surface is legacy implementation history and will be retired through the new five-phase roadmap in `IMPLEMENTATION_PLAN.md`.
+- No trusted-handoff product functionality has been implemented yet. Existing code remains the pre-migration backend and launch-package demonstration.
+- The existing backend remains intact: explicit workflows, signatures, freshness, Sibyl persistence, attempts, blocked and pending states, artifact checks, ACP reconciliation, spending controls, and Base evidence handling.
+- The current non-spending baseline is 74 passing tests, verified on 2026-09-04.
+- Existing live ACP limitations remain unchanged. Delta still does not prove paid execution through settlement and verified artifact finalization into a reusable `WorkResult`, followed by fresh-process recall and authorized Agent B inheritance.
+- The next implementation task is Phase 1 only: handoff contracts and the deterministic pre-prompt policy gate. Phase 2 must not begin until Phase 1 passes its exit gate.
+- Do not claim that agent handoff, inheritance authorization, approved-context LLM execution, Reuse Receipts, public login, isolated demo workspaces, scenario reset, or the new scenarios already exist.
+
+## Approved scenario and rollout decisions
+
+- Primary scenario: AI software-work handoff.
+- General-audience scenario: Home repair handoff.
+- ACP/Base scenario: Paid research handoff.
+- Legacy `WorkResult` records are not automatically authorized for cross-agent inheritance.
+- Reset uses safe scoped deletion if the official Sibyl API supports it, otherwise generation rotation.
+- A scenario initializes through real backend persistence when first opened.
+- The first LLM rollout uses one provider. A second provider is deferred.
+- Public demo authentication and live spending authorization remain completely separate.
+
+## Legacy implementation history
+
+The entries below describe the implementation that existed before the trusted-handoff direction was approved. They remain evidence of completed work, not the current product roadmap.
+
+### 2026-09-03 application redesign
 
 - Replaced the generic application shell with one connected work-first journey: completed Launch Package, change request, planner preview, execution/result, runs, integrations, and contextual recovery. The public landing page and engine/integration behavior were not changed.
 - Launch Package now reads the project-scoped `/api/state` response and gives persisted outputs visual priority. Missing work shows the honest `No launch package exists yet.` state with `Create demo launch package`, which calls the real deterministic preview and execute endpoints.
@@ -9,7 +38,7 @@
 - Application-only CSS and JavaScript were updated for compact top navigation, artifact-first layouts, dependency sequencing, keyboard/mobile behavior, reduced motion, and 1440/1024/768/390 viewport checks. Screenshots are in `.delta/review/` and remain ignored local review artifacts.
 - Verification: full `.venv/bin/python -m pytest -q` passed; focused `tests/test_phase5_web.py` passed (7 tests); `node --check delta/static/app.js` and Python bytecode compilation passed. Deterministic API coverage confirms launch-date-only change produces `reuse`, `rerun`, `pending_dependency`, stale execution is blocked, and outputs persist through Sibyl.
 
-## 2026-09-03 application experience pass
+### 2026-09-03 application experience pass
 
 - Reworked the existing application workspace around a progressive completed-work flow: workflow overview, change request, revision preview, execution/result, workflow history, and reconciliation aliases. The public landing page was not changed in this pass.
 - Simplified primary navigation to Workflows, Revisions, Runs, and Integrations, with Continuity retained as a contextual recovery destination. Existing server routes remain compatible and new workflow URLs resolve to the same backend-driven views.
@@ -18,7 +47,7 @@
 - Added route coverage for the new workflow URLs and reconciliation entry point. JavaScript syntax and whitespace checks pass.
 - Verification: `74 passed, 15 subtests passed`; focused Phase 5 web tests pass (`7 passed`).
 
-## 2026-09-03 public landing redesign
+### 2026-09-03 public landing redesign
 
 - Replaced the rejected warm-paper editorial landing direction with a graphite, cold-white, orange, and violet execution system.
 - Added an above-the-fold interactive workflow topology for launch date, visual brief, and product description scenarios, with illustrative artifacts and explicit reuse, rerun, and pending states.
@@ -26,18 +55,16 @@
 - Verified the complete test suite: `73 passed, 15 subtests passed`.
 - Rendered the landing page at 1440, 1024, 768, and 390 CSS pixel widths. The hero visualization is visible without scrolling at desktop size, and the mobile workflow becomes a readable vertical dependency flow without horizontal overflow.
 
-## 2026-09-03 hero-only visual exploration
+### 2026-09-03 hero-only visual exploration
 
 - Stopped the full-page redesign cycle as requested. Only the public navbar and first hero viewport changed. Existing sections below the hero remain structurally and visually untouched.
 - Added the original local asset `delta/static/solar-charger-campaign.png` for the fictional product visual artifact.
 - Chosen concept: overlapping artifact canvas. Alternatives considered: before/revision comparison and production-line timeline. Artifact canvas won on tangible work, five-second comprehension, and physical causality without a node-graph hero.
 - Verified image serving through the WSGI route (`200 OK`, `image/png`, 2,132,360 bytes), JavaScript syntax, full tests (`73 passed, 15 subtests passed`), and renders at 1440, 1024, and 390 pixels.
 
-Last updated: 2026-09-03 (brand and product interface build)
-
 ## Completed
 
-- Product direction finalized: revision planning, persistent paid-work records, and paid-job continuity.
+- Legacy product direction implemented: revision planning, persistent paid-work records, and paid-job continuity. This is no longer the approved product surface.
 - Planning architecture selected: small Python revision/DAG engine, Sibyl authoritative persistence, Virtuals ACP CLI adapter, Base settlement evidence, and a focused web operations workspace.
 - Official starting references reviewed for hackathon rules, submissions, Sibyl Memory, Virtuals ACP, LangGraph caching/persistence, and Base network documentation.
 - Repository planning package drafted.
@@ -70,6 +97,8 @@ Last updated: 2026-09-03 (brand and product interface build)
 - Phase 8 is not complete. The test suite and documentation have been audited, live history and protocol hash integrity are verified, but live paid-path wiring, tracked evidence, and submission packaging remain open.
 
 ## Phase status
+
+The phase numbers in this section refer to the legacy implementation plan completed before 2026-09-04. Current migration phases are defined only in `IMPLEMENTATION_PLAN.md`.
 
 - Phase 0: Partially complete. Foundation readiness and live ACP marketplace readiness are verified. Base qualification evidence is still absent, so the separate Base gate remains unverified.
 - Phase 1: Verified. Core schemas, deterministic planning, and provider-neutral tests pass without Sibyl, ACP, or Base dependencies.
@@ -231,9 +260,4 @@ Last updated: 2026-09-03 (brand and product interface build)
 
 ## Next
 
-When the user dispatches the builder:
-
-1. Finish the live-path audit fixes before calling Phase 7 or Phase 8 complete. The current findings are recorded in this file and the existing local `.evidence/PHASE7_STEP_BY_STEP.md` record. Live read-only capture and protocol hash verification are complete; the remaining gap is live paid execution through Delta with honest settlement and reusable-work persistence.
-2. If the user wants a second live job (e.g. to extend the demo with a visual or a translation step), Aaga `content_generation` is still the cheapest live provider (0.01 USDC). Get explicit approval per RED gate before any new funding.
-3. Keep the live/fixture split honest: do not let any new fixture or test service be presented as a live ACP, Base, or wallet result. The `restart_test.py` and `test_phase7_live.py` patterns are the templates for any future live evidence.
-4. If the user asks to drain the remaining wallet, run a read-only balance check first and require explicit per-action approval before any transfer. Never put a raw key in chat.
+Implement only Phase 1 from `IMPLEMENTATION_PLAN.md`: add the handoff domain contracts, minimal inheritance policy, candidate discovery, deterministic gate, approved-context type, Reuse Receipt schema, and Sibyl persistence. Prove in a fresh-process test that Agent B receives approved work and blocked content is absent. Do not redesign the UI, add login, create replacement scenarios, call an LLM, or run any live ACP/Base action in Phase 1.

@@ -15,37 +15,35 @@ Implementation sequencing belongs in `IMPLEMENTATION_PLAN.md`. Live progress bel
 
 ## Product purpose
 
-Delta helps developers revise paid agent work without treating every revision as a brand-new job.
+Delta is a trusted handoff layer for agent work.
 
-A developer should be able to ask:
+> Agents can inherit previous work without inheriting everything.
 
-- Which completed outputs are still usable?
-- Which paid jobs need to run again?
-- Why is each step being reused or rerun?
-- Which downstream decisions must wait for an upstream result?
-- What additional service cost is expected before execution?
-- What has already been spent?
-- If a process died, is there an existing paid job that must be reconciled before a replacement is created?
+Agent A may complete work and disappear. When Agent B begins later, Sibyl recalls candidate work and Delta decides what may cross the handoff. Delta evaluates validity, trust, authorization, dependencies, and external-job safety before constructing Agent B's context. Approved work may be inherited. Blocked work stays outside the receiving model's prompt. Missing or invalid work executes through declared workflows, and a Reuse Receipt explains the outcome.
 
-Delta is not a new caching algorithm. Caching, selective reruns, checkpointing, and restart recovery already exist in mature workflow systems. Delta's product contribution is an integrated developer experience around revision planning, durable paid-work records, and continuity of external agent jobs.
+Remembered work is not automatically trusted work. An LLM may act as Agent A or Agent B and consume approved work, but it is not responsible for reuse eligibility, access control, dependency declarations, or paid-job safety.
+
+Delta is not a new caching or memory algorithm. Mature systems already support caching, selective reruns, checkpointing, and restart recovery. Delta's product contribution is the deterministic handoff gate, durable work and paid-job identity, approved-context boundary, and inspectable receipt around those established mechanisms.
 
 ## Intended users
 
-Primary users are developers building workflows that call paid external agents or services where rerunning work has monetary cost and a remote lifecycle.
+Primary users are developers building agents that must inherit completed work across sessions, processes, or model boundaries without exposing all remembered context. Paid external services are an important case because unsafe inheritance or unnecessary reruns can also create monetary cost.
 
 The first concrete ecosystem is Virtuals ACP because it exposes explicit provider offerings, job identities, budgets, escrow funding, deliverables, and terminal lifecycle states. The engine should remain provider-adapter based so the core revision model is not hard-coded to ACP.
 
 ## Core capabilities
 
-### Revision preview
+### Handoff evaluation
 
-Before execution, Delta computes a plan for every step:
+Before Agent B receives context or execution begins, Delta evaluates candidate work and computes a decision for every relevant item:
 
 - `reuse`: a completed result is still valid.
 - `rerun`: no valid reusable result exists for the effective input and policy.
 - `pending_dependency`: an upstream step must finish before the downstream effective input can be known.
 
-Each decision includes structured reason codes and a short human-readable explanation.
+Each decision includes separate validity, trust, authorization, dependency, and external-job verdicts, plus structured reason codes and a short human-readable explanation.
+
+A valid result may still be unauthorized. Blocked work must be excluded before prompt construction, tool arguments, tracing, or provider submission.
 
 Where reliable information exists, the preview includes estimated additional service cost. Unknown prices remain `unknown`.
 
@@ -69,6 +67,9 @@ Delta preserves the information needed to understand and safely continue work ac
 - transaction references where available
 - failure and reconciliation state
 - execution history
+- source agent and session identity for new handoff-aware records
+- inheritance policy and receiving agent identity
+- handoff decisions and Reuse Receipts
 
 Sibyl Memory is authoritative for this state in the hackathon submission.
 
@@ -82,76 +83,43 @@ If an action may have created a job but no reliable job identity was captured, D
 
 This is not an exactly-once guarantee.
 
-## Initial demonstration workflow
+## Demonstration strategy
 
-The launch-package workflow contains three explicit steps.
+The previous product visual, announcement, translation, and launch-date workflow is legacy demo material. It remains implementation history while the migration proceeds, but it is not the approved product direction.
 
-### Product visual
+All new scenarios use the same handoff, policy, persistence, execution, and receipt architecture:
 
-Relevant inputs:
+1. **AI software-work handoff**, the primary story. Agent A completed multiple parts of a software task. Agent B takes over after a requirement or implementation constraint changes. Some work crosses, some is blocked by policy, some reruns, and downstream work waits.
+2. **Home repair handoff**, the general-audience explanation of valid work versus authorized work.
+3. **Paid research handoff**, the ACP/Base and economic-reuse demonstration. The precise live offering remains subject to current read-only discovery.
 
-- `product_description`
-- `visual_brief`
+The first LLM rollout uses one provider with genuinely distinct Agent A and Agent B sessions. A second provider is deferred. The deterministic gate remains authoritative for every provider.
 
-No workflow dependency.
+## Required handoff behavior
 
-### Announcement
+### Candidate recall
 
-Relevant inputs:
+Sibyl may return related previous work even when it is not reusable. Delta must distinguish no candidate, invalid candidate, untrusted candidate, unauthorized candidate, dependency waiting, reconciliation required, and approved reuse.
 
-- `product_description`
-- `launch_date`
+### Valid but unauthorized work
 
-No dependency on the visual.
+A matching, fresh, intact result must still be blocked when the receiving agent or provider falls outside its inheritance policy. Its content must not enter Agent B's context.
 
-### Translation
+### Changed requirement or implementation
 
-Relevant inputs:
+Work whose effective input or implementation identity changed must rerun. Downstream work remains `pending_dependency` until the new upstream output exists, then Delta reevaluates it from that actual output.
 
-- announcement output
-- `target_language`
+### Freshness and artifacts
 
-Explicit dependency on announcement.
-
-The final live provider mapping is not locked until current ACP offerings are discovered and verified. The workflow concept remains the same if a service substitution is required.
-
-## Required behavior
-
-### Unchanged request
-
-Reuse every successful, available, fresh result whose scope, effective input signature, and implementation identity still match.
-
-### Launch date changes
-
-Reuse visual.
-
-Rerun announcement.
-
-Mark translation `pending_dependency` before announcement completes if its final effective input is not yet known.
-
-After announcement completes, recompute translation's effective input signature. If the new announcement output has the same output signature as the previous announcement, reuse translation when all other validity conditions still hold.
-
-### Visual brief changes
-
-Rerun visual only. Announcement and translation remain reusable when valid.
-
-### Product description changes
-
-Rerun visual and announcement. Translation remains pending until the new announcement output is known, then is reevaluated from its actual effective input.
-
-### Freshness expiration
-
-An expired work result is not reusable. Expiration of one independent step does not invalidate unrelated work.
-
-### Implementation/version change
-
-Changing a step's developer-declared implementation identity invalidates previous work for that step even if the logical inputs are unchanged. Downstream work is reevaluated after the new output is known.
+Expired work and unavailable or unverifiable artifacts are not reusable. An independent invalid item does not invalidate unrelated work.
 
 ### Failure or incomplete execution
 
-Failed, interrupted, ambiguous, or incomplete attempts are not reusable work results.
+Failed, interrupted, ambiguous, or incomplete attempts are not reusable results. Known or ambiguous paid work must be reconciled before replacement.
 
-A previous valid successful result can remain reusable if a later failed attempt did not invalidate it for the current effective input and freshness policy.
+### Reuse Receipt
+
+Every completed handoff produces a persisted receipt with consequence-first summaries and per-item decisions. Technical evidence may include agent and session identity, Sibyl record identity, dependency and artifact evidence, policy decision, provider and job identity, Base evidence, and costs only when the backend proves them.
 
 ## Architecture decision
 
@@ -217,6 +185,8 @@ A separate comparison harness for correctly configured LangGraph caching and per
 ## Developer-facing API
 
 The developer experience should make relevant inputs and dependencies explicit in code.
+
+The launch-package example below documents the existing engine API only. It is legacy material and must be replaced with handoff-aware examples after Phase 1 contracts are implemented.
 
 Conceptual shape:
 
@@ -727,50 +697,21 @@ Never intentionally maintain two active paid attempts for the same project, work
 
 An existing active or ambiguous attempt blocks replacement until reconciled.
 
-## Minimal web demonstration
+## Web demonstration
 
-One page is sufficient.
+The primary interaction is a visible handoff:
 
-### Layout
+1. Select one of the three scenarios.
+2. Inspect Agent A's completed work.
+3. End Agent A's session and start a distinct Agent B session.
+4. Let Delta recall and gate candidate work.
+5. Show which work crosses, stops, reruns, or waits.
+6. Execute missing work only after a current gate result.
+7. Show the final work and Reuse Receipt.
 
-Use a clear workflow-focused layout rather than a dashboard shell.
+The public demo also needs a fixed visible login, Delta Dave account state, sign out, isolated browser workspaces, scenario-scoped state, and Reset Demo. Public authentication never grants live spending authority. The application should remain simpler and quieter than the backend, with technical evidence progressively disclosed.
 
-Top section:
-
-- project ID
-- product description
-- visual brief
-- launch date
-- target language
-- revision preview action or automatic preview after edits
-- total estimated additional service cost
-- approved budget state
-
-Workflow section:
-
-Three vertically ordered step rows with simple dependency indication between announcement and translation.
-
-Each step shows:
-
-- step name
-- decision: reuse, rerun, or pending dependency
-- reason
-- estimated step cost or unknown
-- current output preview or artifact link
-- provider/offering when live
-- job ID and chain when created
-- live normalized state
-- actual service cost when known
-
-### Actions
-
-- `Preview revision`
-- `Execute revision`
-- an explicit spend confirmation when paid work is required
-- `Reconcile` when an existing job needs recovery
-- `Approve deliverable and settle` when settlement requires a distinct confirmation
-
-Keep the settlement action explicit in the initial version because it releases escrow.
+The current launch-package routes and page composition are legacy implementation details, not requirements.
 
 ### Recovery states
 
@@ -866,26 +807,27 @@ The submission is not complete at the deterministic proof milestone.
 Minimum complete submission requires:
 
 1. Reusable Delta engine with explicit workflow definitions.
-2. Revision preview with reasons and cost estimates where known.
-3. Sibyl as authoritative persistent work, attempt, and plan state.
-4. Real process restart recovery from Sibyl.
-5. Correct downstream reevaluation after upstream execution.
-6. Deterministic tests for all required revision and failure cases.
-7. Conservative interrupted-job reconciliation behavior.
-8. A genuine Virtuals ACP service job with a real deliverable.
-9. Actual Base onchain payment or settlement evidence in the demonstrated workflow.
-10. Explicit spend approval and cap enforcement.
-11. Minimal one-page web demonstration with real recovery/error states.
-12. Fair LangGraph baseline comparison.
-13. Honest documentation and judge runbook.
-14. Public repository requirements satisfied, including an OSI-approved license and required README disclosures.
-15. Demo evidence showing fresh-session Sibyl recall on the critical path.
+2. Deterministic candidate evaluation across validity, trust, authorization, dependencies, and external-job safety.
+3. Pre-prompt exclusion proving blocked content never reaches Agent B.
+4. Sibyl as authoritative persistent work, handoff, receipt, attempt, and plan state.
+5. Real process restart recovery from Sibyl with distinct Agent A and Agent B sessions.
+6. Reuse Receipts with reasons and honest cost evidence.
+7. Correct downstream reevaluation after upstream execution.
+8. Conservative interrupted-job reconciliation behavior.
+9. Isolated public demo workspaces, three scenarios, and safe reset behavior.
+10. One real LLM provider with distinct sessions, plus an honestly labelled fixture path.
+11. A genuine Virtuals ACP service job with a real deliverable.
+12. Actual Base payment or settlement evidence in the demonstrated workflow.
+13. Explicit spend approval and cap enforcement separate from public login.
+14. Accessible, responsive handoff-first product and landing experiences.
+15. Fair LangGraph baseline, honest documentation, public repository requirements, and reproducible evidence.
 
 ## Later enhancements
 
 Not required for the hackathon submission:
 
 - additional provider adapters
+- a second LLM provider
 - hosted multi-tenant service
 - object-store artifact backend
 - atomic distributed leases
@@ -919,4 +861,8 @@ These must not distract from the minimum complete submission.
 - Require explicit approval before every live spending phase and enforce a maximum cap.
 - Treat ambiguous paid outcomes as reconciliation problems, not retry triggers.
 - Support one writer process in the initial submission and document the boundary.
-- Keep the launch-package UI small and workflow-focused.
+- Gate recalled work before constructing receiving-agent context.
+- Use a minimal inheritance policy rather than a general IAM system.
+- Use AI software-work, home repair, and paid research handoffs as the shared demonstration strategy.
+- Keep public demo authentication separate from live spending authority.
+- Treat the launch-package UI and workflow as legacy migration material.
