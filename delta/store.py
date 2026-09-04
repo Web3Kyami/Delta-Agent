@@ -44,6 +44,8 @@ ATTEMPT_CATEGORY = "delta.execution_attempt.v1"
 PLAN_CATEGORY = "delta.revision_plan.v1"
 HANDOFF_CATEGORY = "delta.handoff_record.v1"
 RECEIPT_CATEGORY = "delta.reuse_receipt.v1"
+AGENT_SESSION_CATEGORY = "delta.agent_session.v1"
+AGENT_RUN_CATEGORY = "delta.agent_run.v1"
 ARTIFACT_REFERENCE_PREFIX = "delta/artifact/v1"
 EVENT_RECORD_TYPE = "delta.execution_event.v1"
 DEFAULT_MAX_INLINE_RECORD_BYTES = 64 * 1024
@@ -730,7 +732,15 @@ class SibylStore:
 
         workflow_ids = workflow_ids or set()
         step_ids = step_ids or set()
-        categories = (WORK_CATEGORY, ATTEMPT_CATEGORY, PLAN_CATEGORY, HANDOFF_CATEGORY, RECEIPT_CATEGORY)
+        categories = (
+            WORK_CATEGORY,
+            ATTEMPT_CATEGORY,
+            PLAN_CATEGORY,
+            HANDOFF_CATEGORY,
+            RECEIPT_CATEGORY,
+            AGENT_SESSION_CATEGORY,
+            AGENT_RUN_CATEGORY,
+        )
         deleted: dict[str, int] = {category: 0 for category in categories}
         target_scope = _scope_payload(self.scope)
         for category in categories:
@@ -752,6 +762,50 @@ class SibylStore:
 
         for step_id in step_ids:
             self.set_active_attempt(step_id, None)
+
+    def save_agent_session(self, session: Any) -> None:
+        """Persist one agent identity and session through Sibyl."""
+
+        self._assert_scope(session.scope)
+        payload = session.payload()
+        self._save_entity(
+            AGENT_SESSION_CATEGORY,
+            _key("agent_session", session.scope, session_id=session.principal.session_id),
+            payload,
+            status="active",
+        )
+
+    def list_agent_sessions(self) -> list[dict[str, Any]]:
+        sessions = []
+        for entity in self.client.list_entities(AGENT_SESSION_CATEGORY, limit=100000):
+            payload = entity.get("body") or {}
+            if payload.get("scope") != _scope_payload(self.scope):
+                continue
+            sessions.append(payload)
+        return sessions
+
+    def save_agent_run(self, run: Any) -> None:
+        """Persist a validated or failed agent run, never as reusable work."""
+
+        self._assert_scope(run.scope)
+        payload = run.payload()
+        self._save_entity(
+            AGENT_RUN_CATEGORY,
+            _key("agent_run", run.scope, run_id=run.run_id),
+            payload,
+            status=run.status,
+        )
+
+    def get_agent_run(self, run_id: str) -> dict[str, Any] | None:
+        entity = self._get_entity(
+            AGENT_RUN_CATEGORY,
+            _key("agent_run", self.scope, run_id=run_id),
+        )
+        if entity is None:
+            return None
+        payload = entity["body"]
+        self._check_payload_scope(payload)
+        return payload
 
     def save_demo_marker(self, scenario_id: str, generation: str, *, initialized: bool = True) -> None:
         """Persist a small scenario initialization marker in Sibyl HOT state."""

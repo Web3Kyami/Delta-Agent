@@ -17,7 +17,7 @@ launch-package revision demonstration while it is migrated through
 
 ## Status
 
-**Current status: Phases 1 and 2 of the trusted-handoff roadmap are implemented and verified. The existing launch-package surface remains legacy. The next task is Phase 3, approved-context LLM execution and Reuse Receipts.**
+**Current status: Phases 1 through 3 of the trusted-handoff roadmap are implemented and locally verified. The existing launch-package surface remains legacy. Phase 4 is next, after an operator-approved live provider check if live evidence is required.**
 
 ### Current capabilities
 
@@ -26,6 +26,7 @@ Implemented and verified:
 - **Phase 1**: core engine, input/output signatures, dependency validation
 - **Migration Phase 1**: trusted-handoff contracts and deterministic policy gate
 - **Migration Phase 2**: signed demo identity, isolated workspaces and scenarios, scoped reset
+- **Migration Phase 3**: distinct agent sessions, approved-context execution, provider boundary, and Reuse Receipts
 - **Legacy Phase 2**: Sibyl Memory persistence (entities + journal + artifact references)
 - **Legacy Phase 3**: deterministic execution engine, attempt lifecycle, blocked/failure states
 - **Legacy Phase 4**: no-spend Virtuals ACP adapter (read-only history, JSON CLI, reconciliation)
@@ -33,7 +34,7 @@ Implemented and verified:
 - **Phase 6**: LangGraph comparison baseline (overlap measured, not claimed novel)
 - **Phase 7**: live Aaga ACP history and Base transaction evidence, with the paid execution-to-reusable-work gap documented rather than claimed as complete.
 
-The current non-spending Python test suite is **128 passing tests**, verified on
+The current non-spending Python test suite is **138 passing tests**, verified on
 2026-09-04. See `STATE.md` for verified facts, onchain evidence, and the next action.
 
 ### Approved migration direction

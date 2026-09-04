@@ -1,6 +1,6 @@
 # Delta State
 
-Last updated: 2026-09-04 (Phase 2 demo identity, isolation, scenarios, and reset verified)
+Last updated: 2026-09-04 (Phase 3 agent sessions, approved-context execution, and receipt finalization verified)
 
 ## Current direction
 
@@ -8,11 +8,22 @@ Last updated: 2026-09-04 (Phase 2 demo identity, isolation, scenarios, and reset
 - The approved flow is Agent A completion, Sibyl persistence, Agent A session end, later Agent B session, deterministic validity/trust/authorization/dependency/external-job gating, approved-context construction, missing-work execution, and a Reuse Receipt.
 - The previous launch-package and revision-centric product surface is legacy implementation history and will be retired through the new five-phase roadmap in `IMPLEMENTATION_PLAN.md`.
 - Phase 1 of the migration is implemented and verified. `delta/handoff.py` owns agent/session provenance evaluation, a minimal inheritance policy, candidate discovery, five separate verdicts, the deterministic pre-prompt gate, `ApprovedContext`, `HandoffRecord`, and `ReuseReceipt`.
-- Phase 2 is implemented and verified in the committed checkpoint `74ffd0e`. It adds signed demo sessions, server-controlled composite scopes, three isolated scenarios, first-open Sibyl initialization, scoped reset, stale-generation checks, and public no-spend boundaries. Phases 3 to 5 are not implemented.
+- Phase 2 is implemented and verified in the committed checkpoint `74ffd0e`. Phase 3 is implemented and locally verified: distinct agent sessions, approved-context provider requests, declared missing-work execution, and receipt finalization are persisted through Sibyl. An external OpenAI call remains unverified because no credentials or API-spend approval were available. Phases 4 and 5 are not implemented.
 - The existing backend remains intact: explicit workflows, signatures, freshness, Sibyl persistence, attempts, blocked and pending states, artifact checks, ACP reconciliation, spending controls, and Base evidence handling.
-- The current non-spending baseline is 128 passing tests, verified on 2026-09-04 after Phase 2. The pre-Phase-1 baseline was 74 tests.
+- The current non-spending baseline is 138 passing tests, verified on 2026-09-04 after Phase 3. The pre-Phase-1 baseline was 74 tests.
 - Existing live ACP limitations remain unchanged. Delta still does not prove paid execution through settlement and verified artifact finalization into a reusable `WorkResult`, followed by fresh-process recall and authorized Agent B inheritance.
-- The next implementation task is Phase 3: agent sessions, approved-context LLM execution, and Reuse Receipts. Phases 1 and 2 have passed their exit gates.
+- The next implementation task is Phase 4: handoff-first application UX and landing redesign. Phases 1 and 2 have passed their exit gates; Phase 3's provider contract and local end-to-end path are verified, while external model execution remains unverified.
+
+## Phase 3 verified results (2026-09-04)
+
+- `.venv/bin/python -m pytest -rA` returned `138 passed, 19 subtests passed`.
+- `git diff --check`, Python compilation, and JavaScript syntax checks passed.
+- `delta/agents` defines the provider-neutral `AgentRunner`, a clearly labelled deterministic fixture runner, and an OpenAI Responses adapter using `OPENAI_API_KEY` only when explicitly configured.
+- The gate runs before request construction. Provider payloads are built from `ApprovedContext` only; blocked canary content is absent from prompts, provider request metadata, Agent B fixture output, and the browser endpoint response.
+- Agent A and Agent B identities are persisted through Sibyl as `delta.agent_session.v1`; agent outcomes are persisted as `delta.agent_run.v1` and are never written as reusable `WorkResult` records.
+- Missing declared work executes through `DeltaEngine`. Finalized Reuse Receipt entries record `reused`, `blocked`, `pending_dependency`, `executed`, or `failed` outcomes and link executed entries to persisted attempt IDs.
+- `.venv/bin/python -m pytest -q tests/test_phase3_agents.py tests/test_phase3_web.py` returned `10 passed`.
+- No external OpenAI request was made. The adapter's HTTP contract is verified with an injected transport; real execution remains pending configured credentials and explicit API-spend approval.
 
 ## Phase 2 verified results (2026-09-04)
 

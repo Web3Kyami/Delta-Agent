@@ -2,7 +2,7 @@
 
 ## Current position
 
-Phase 2 of the trusted-handoff migration is implemented and has passed its exit gate. The checkpoint is committed as `74ffd0e` on `main`. Verified commands and results are recorded in `STATE.md` under "Phase 2 verified results (2026-09-04)".
+Phase 3 of the trusted-handoff migration is implemented and locally verified. The Phase 1 and 2 checkpoint is `74ffd0e`, followed by the current Phase 3 checkpoint. Verified commands and results are recorded in `STATE.md` under the Phase 2 and Phase 3 sections.
 
 What exists now:
 
@@ -12,22 +12,21 @@ What exists now:
 - `delta/session.py` owns signed public demo sessions, Delta Dave identity, expiry, and per-session CSRF.
 - `delta/scenarios.py` defines the AI software-work, Home repair, and Paid research scenarios using one shared deterministic engine shape.
 - `delta/web.py` exposes authenticated scenario listing, first-open initialization, handoff evaluation, reset, and public no-spend boundaries.
-- `.venv/bin/python -m pytest -q` returned `128 passed`.
+- `delta/agents` owns the provider-neutral AgentRunner contract, deterministic fixture runner, OpenAI Responses adapter, agent-session/run records, approved-context request construction, and post-execution receipt finalization.
+- `.venv/bin/python -m pytest -q` returned `138 passed`.
 - `.venv/bin/python scripts/phase2_mutation_review.py` caught all 8 Phase 2 guard-removal mutations.
 
-What still does not exist: a real LLM call, live ACP/Base action for the new handoff path, or the Phase 4 visual redesign. The existing launch-package UI remains legacy until those phases.
+What remains unverified: an external OpenAI call, live ACP/Base action for the new handoff path, and the Phase 4 visual redesign. No external model call was made because credentials and API-spend approval were not available. The existing launch-package UI remains legacy until those phases.
 
-## Next task: Phase 3
+## Next task: Phase 4
 
-Implement Phase 3 from `IMPLEMENTATION_PLAN.md` only:
+Implement Phase 4 from `IMPLEMENTATION_PLAN.md` only:
 
-- one real LLM provider with distinct Agent A and Agent B sessions
-- approved-context construction before provider requests
-- prompt, tool, log, trace, and browser leakage tests
-- missing-work execution through the declared engine
-- persisted Reuse Receipt derived from actual decisions
+- handoff-first application UX and landing-page redesign
+- scenario-first browser flow using the Phase 3 endpoint
+- progressive disclosure for receipts and provider evidence
 
-Do not begin Phase 4 or Phase 5 until the Phase 3 exit gate passes.
+Do not begin Phase 5 until the Phase 4 exit gate passes.
 
 ## Phase 2 proof and boundaries
 
@@ -39,6 +38,7 @@ Do not begin Phase 4 or Phase 5 until the Phase 3 exit gate passes.
 - The old signed generation is tombstoned in Sibyl and rejected on later state or reset requests.
 - Old generations are rejected with `stale_generation` when supplied to handoff or reset.
 - Public sessions receive an unauthenticated or blocked response for live approval actions. No ACP job, wallet action, settlement, or Base transaction was run.
+- Phase 3 end-to-end tests prove Agent B receives only approved context, missing work runs through the declared engine, failed provider output is not persisted as reusable work, and finalized receipt entries link executed work to Sibyl attempts.
 
 ## Do not begin early
 

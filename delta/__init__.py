@@ -45,6 +45,22 @@ from .core import (
 )
 from .store import SibylPersistenceError, SibylScopeError, SibylStore, SibylUnavailable
 from .execute import CostSummary, DeltaEngine, ExecutionBlocked, ExecutionReport
+from .agents import (
+    AgentHandoffResult,
+    AgentHandoffService,
+    AgentOutputError,
+    AgentRequest,
+    AgentResponse,
+    AgentRunner,
+    AgentRunnerError,
+    AgentRunnerUnavailable,
+    AgentRun,
+    AgentSession,
+    AgentUsage,
+    DeterministicAgentRunner,
+    OpenAIResponsesRunner,
+    build_agent_messages,
+)
 from .handoff import (
     ApprovedContext,
     ApprovedWorkItem,
@@ -124,6 +140,20 @@ __all__ = [
     "DeltaEngine",
     "ExecutionBlocked",
     "ExecutionReport",
+    "AgentHandoffResult",
+    "AgentHandoffService",
+    "AgentOutputError",
+    "AgentRequest",
+    "AgentResponse",
+    "AgentRunner",
+    "AgentRunnerError",
+    "AgentRunnerUnavailable",
+    "AgentRun",
+    "AgentSession",
+    "AgentUsage",
+    "DeterministicAgentRunner",
+    "OpenAIResponsesRunner",
+    "build_agent_messages",
     "ApprovedContext",
     "ApprovedWorkItem",
     "AuthorizationStatus",

@@ -637,6 +637,8 @@ class ReuseReceiptEntry:
     verdicts: HandoffVerdicts
     evidence: WorkEvidence
     estimated_cost: CostEstimate | None = None
+    outcome: str = "not_recorded"
+    attempt_id: str | None = None
 
     def __post_init__(self) -> None:
         _identifier(self.step_id, "step_id")
@@ -648,6 +650,10 @@ class ReuseReceiptEntry:
             raise HandoffPolicyError("receipt entry requires HandoffVerdicts")
         if not isinstance(self.evidence, WorkEvidence):
             raise HandoffPolicyError("receipt entry requires WorkEvidence")
+        if self.outcome not in {"not_recorded", "reused", "executed", "blocked", "pending_dependency", "failed"}:
+            raise HandoffPolicyError("receipt entry outcome is invalid")
+        if self.attempt_id is not None:
+            _identifier(self.attempt_id, "receipt attempt_id")
 
     @classmethod
     def from_decision(cls, decision: HandoffDecision) -> "ReuseReceiptEntry":
@@ -676,6 +682,8 @@ class ReuseReceiptEntry:
                 "currency": self.estimated_cost.currency,
                 "source": self.estimated_cost.source,
             },
+            "outcome": self.outcome,
+            "attempt_id": self.attempt_id,
         }
 
 
@@ -784,6 +792,8 @@ def _decode_receipt_entry(payload: Mapping[str, Any]) -> ReuseReceiptEntry:
         verdicts=_decode_verdicts(payload["verdicts"]),
         evidence=_decode_evidence(payload["evidence"]),
         estimated_cost=_decode_cost(payload.get("estimated_cost")),
+        outcome=payload.get("outcome", "not_recorded"),
+        attempt_id=payload.get("attempt_id"),
     )
 
 

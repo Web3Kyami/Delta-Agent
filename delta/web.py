@@ -12,9 +12,10 @@ from urllib.parse import parse_qs, urlencode
 from typing import Any, Callable
 
 from .core import AgentPrincipal, DecisionKind, InputValidationError, RevisionRequest
+from .agents import AgentHandoffService, DeterministicAgentRunner, OpenAIResponsesRunner
 from .demo import DEMO_WORKFLOW_ID, demo_request, demo_scope, new_generation, workspace_scope
 from .execute import DeltaEngine
-from .handoff import HandoffGate, HandoffRequest
+from .handoff import HandoffGate, HandoffRequest, ProviderRule
 from .scenarios import scenario_definition, SCENARIOS
 from .session import (
     DEMO_DISPLAY_NAME,
@@ -115,6 +116,9 @@ class DeltaWebApp:
             if path.startswith("/api/scenarios/") and path.endswith("/reset") and method == "POST":
                 scenario_id = path.removeprefix("/api/scenarios/").removesuffix("/reset").strip("/")
                 return self._handle_scenario_reset(environ, start_response, scenario_id)
+            if path.startswith("/api/scenarios/") and path.endswith("/agent-run") and method == "POST":
+                scenario_id = path.removeprefix("/api/scenarios/").removesuffix("/agent-run").strip("/")
+                return self._handle_scenario_agent_run(environ, start_response, scenario_id)
             if path in {"/api/reconcile", "/api/approve", "/api/settle"} and method == "POST":
                 return self._handle_unavailable_action(environ, start_response, path)
             return self._json(start_response, {"status": "error", "message": "The requested route does not exist."}, 404)
@@ -366,6 +370,81 @@ class DeltaWebApp:
             "message": "This scenario was reset. Its Sibyl journal remains retained audit history.",
         }
         return self._json_with_headers(start_response, response, 200, [("Set-Cookie", self._session_cookie(updated))])
+
+    def _handle_scenario_agent_run(self, environ: dict[str, Any], start_response: Callable[..., Any], scenario_id: str):
+        self._require_csrf(environ)
+        payload = self._read_json(environ)
+        session, definition, store, generation, assigned = self._scenario_session(environ, scenario_id)
+        requested_generation = payload.get("generation")
+        if requested_generation is not None and requested_generation != generation:
+            return self._json(start_response, {"status": "stale_generation", "message": "This agent run belongs to an older scenario generation. Reload the current scenario."}, 409)
+        task = payload.get("task")
+        if not isinstance(task, str) or not task.strip():
+            raise InputValidationError("An Agent B task is required.")
+        mode = payload.get("mode", "deterministic_fixture")
+        if mode == "deterministic_fixture":
+            runner = DeterministicAgentRunner()
+            provider_id = "delta-fixture"
+            policies = definition.policies(store.scope)
+        elif mode == "real_provider":
+            runner = OpenAIResponsesRunner()
+            provider_id = "openai"
+            policies = definition.policies(
+                store.scope,
+                provider_rule=ProviderRule.PROVIDER_ALLOWLIST,
+                provider_allowlist=("openai",),
+            )
+        else:
+            raise InputValidationError("Agent run mode must be deterministic_fixture or real_provider.")
+        recipient = AgentPrincipal(
+            "agent-b",
+            f"{scenario_id}-{generation}-agent-b-{secrets.token_hex(4)}",
+            provider_id,
+        )
+        request = HandoffRequest(
+            scope=store.scope,
+            workflow=definition.workflow(),
+            inputs={"brief": payload.get("brief", definition.initial_inputs["brief"]), "revision": payload.get("revision", "constraint-change")},
+            recipient=recipient,
+            policies=policies,
+        )
+        result = AgentHandoffService(store, runner).run(
+            request,
+            task=task,
+            trace_id=payload.get("trace_id") if isinstance(payload.get("trace_id"), str) else None,
+        )
+        response = self._scenario_payload(session, definition, store, generation, status="agent_run")
+        response["agent_run"] = {
+            "run_id": result.run.run_id,
+            "status": result.run.status,
+            "error_code": result.run.error_code,
+            "provider_id": result.run.principal.provider_id,
+            "model": result.run.response.model if result.run.response else None,
+            "session_id": result.run.principal.session_id,
+            "response": result.run.response.output if result.run.response else None,
+        }
+        response["receipt"] = {
+            "receipt_id": result.evaluation.receipt.receipt_id,
+            "summary": result.evaluation.receipt.summary,
+            "counts": dict(result.evaluation.receipt.counts),
+            "entries": [entry.payload() for entry in result.evaluation.receipt.entries],
+        }
+        response["approved_context"] = result.evaluation.approved_context.prompt_payload()
+        response["execution"] = {
+            "decisions": [
+                {
+                    "step_id": decision.step_id,
+                    "decision": decision.decision.value,
+                    "reason_code": decision.reason_code,
+                    "reason": decision.reason,
+                    "input_signature": decision.input_signature,
+                }
+                for decision in result.execution.decisions
+            ],
+            "mode": "deterministic_fixture" if mode == "deterministic_fixture" else "real_provider_missing_work",
+        }
+        headers = [("Set-Cookie", self._session_cookie(session))] if assigned else []
+        return self._json_with_headers(start_response, response, 200, headers)
 
     def _scenario_payload(self, session: DemoSession, definition: Any, store: SibylStore, generation: str, *, status: str) -> dict[str, Any]:
         workflow = definition.workflow()

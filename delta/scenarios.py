@@ -81,7 +81,14 @@ class ScenarioDefinition:
             ),
         )
 
-    def policies(self, scope: Scope, recipient_scope: Scope | None = None) -> PolicySet:
+    def policies(
+        self,
+        scope: Scope,
+        recipient_scope: Scope | None = None,
+        *,
+        provider_rule: ProviderRule = ProviderRule.SAME_PROVIDER,
+        provider_allowlist: tuple[str, ...] | None = None,
+    ) -> PolicySet:
         recipient_scope = recipient_scope or scope
         policies = []
         for category in ("shared_context", "private_notes", "dependent_summary", "revision_output"):
@@ -91,7 +98,8 @@ class ScenarioDefinition:
                     project_scope=scope,
                     recipient_scope=recipient_scope,
                     work_category=category,
-                    provider_rule=ProviderRule.SAME_PROVIDER,
+                    provider_rule=provider_rule,
+                    provider_allowlist=provider_allowlist,
                     external_exposure_rule=(
                         ExternalExposureRule.SHAREABLE_ONLY
                         if category == "private_notes"
