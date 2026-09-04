@@ -22,6 +22,7 @@ What exists now:
 - The linked Virtuals agent-profile ACP tab is empty for jobs, offerings, resources, and subscriptions. Treat this as a UI visibility mismatch, not cancellation. The ACP history endpoint remains authoritative for `75773`; do not create a replacement until the open attempt is resolved.
 - A read-only ACP marketplace browse failed locally with `KeyRevoked` from the OS secret store before any marketplace request. Reauthenticate the ACP CLI using the split configure flow, then refresh offering and job history. Do not work around this by adding offerings to the Delta agent profile.
 - Authentication was restored and the live Base browse succeeds, but Aaga and its approved `content_generation` offering are absent from current results. Other providers are discoverable, but switching would require new approval. Phase 5 is blocked on the approved provider becoming available.
+- Safest path selected: do not replace, fund, complete, or settle job `75773`. Use the locally verified Phase 1 through Phase 4 path for the current handoff and revisit live proof only with a fresh provider approval.
 - `.venv/bin/python scripts/phase2_mutation_review.py` caught all 8 Phase 2 guard-removal mutations.
 
 What remains unverified: an external OpenAI call and live ACP/Base action for the new handoff path. No external model call was made because credentials and API-spend approval were not available. Phase 5 owns live proof and submission hardening.

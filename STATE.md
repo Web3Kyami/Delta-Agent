@@ -23,6 +23,7 @@ Last updated: 2026-09-04 (Phase 4 handoff-first UX and landing redesign verified
 - A read-only ACP marketplace browse on 2026-09-04 failed before contacting the marketplace with `Native secret service error: ... KeyRevoked`. The ACP CLI credential must be reauthenticated through its documented split configure flow before Delta can refresh offerings or reconcile the job again. No job, funding, or transaction action was attempted by that browse.
 - ACP authentication was restored through the split configure flow. A live Base browse now succeeds, but no Aaga agent or `content_generation` offering is discoverable in the returned marketplace results. Other providers and offerings are present, but the approved scope excludes them. Phase 5 is blocked by provider availability, not wallet balance or Sibyl persistence.
 - The approved live envelope is now concrete: one Aaga `content_generation` step on Base `8453`, up to `0.01 USDC` service spend, up to `$0.05` estimated gas, and expiry `2026-09-04T05:00:00Z`. The operator script requires an explicit gas estimate at or below that ceiling before create, fund, or complete actions. No wallet operation, ACP payment, Base transaction, or external model request was made in this phase.
+- Safest-path decision: stop the live attempt, keep job `75773` unreplaced and unfunded, and submit using the locally verified Phase 1 through Phase 4 evidence until an active approved provider is available under a fresh approval.
 
 ## Phase 4 verified results (2026-09-04)
 
