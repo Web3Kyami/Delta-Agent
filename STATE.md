@@ -16,10 +16,10 @@ Last updated: 2026-09-04 (Phase 4 handoff-first UX and landing redesign verified
 
 ## Phase 5 status (2026-09-04)
 
-- The existing operator scope still has ACP job `75773` persisted as `active` on Base `8453`, with provider `0xb0aca700745a989a1cb859eecfe0fd9afbc066aa` and no funding or settlement. `.venv/bin/python scripts/live_acp_validation.py status` confirmed this without a network or spending action.
-- `scripts/live_acp_validation.py` now has a read-only `reconcile` action. It reads provider history, persists the observation into the existing attempt, and explicitly refuses replacement or payment. It has not been run because this environment has no approved live provider session.
-- Phase 5 cannot run its required create, fund, completion, settlement, artifact, and reusable-work proof without explicit approval naming the Base chain, provider and offering, allowed step, transaction actions, maximum service spend, and approval expiry. No live action, wallet operation, ACP payment, Base transaction, or external model request was made in this phase.
-- Until that approval and a safe provider-history reconciliation are available, public claims remain limited to the locally verified deterministic fixture path and recorded external evidence. The known open attempt must be reconciled before any replacement is considered.
+- The existing operator scope still has ACP job `75773` persisted as `active` on Base `8453`, with provider `0xb0aca700745a989a1cb859eecfe0fd9afbc066aa` and no funding or settlement. `.venv/bin/python scripts/live_acp_validation.py status` confirmed this locally.
+- With explicit approval, `.venv/bin/python scripts/live_acp_validation.py reconcile` read provider history and persisted the observation. The job is still `open`, has no transaction hashes, and has no deliverable. No replacement or payment was attempted.
+- With explicit approval, `scripts/live_acp_validation.py message --approve` sent the corrective offering-shaped requirements to job `75773`; ACP returned `success: true`. A follow-up read-only reconciliation still reports `open`, so funding remains blocked until ACP exposes a matching `budget_set` state.
+- Phase 5 cannot run funding, completion, settlement, artifact, and reusable-work proof until the provider supplies a valid quote and the approval has a concrete gas ceiling and expiry. No wallet operation, ACP payment, Base transaction, or external model request was made in this phase.
 
 ## Phase 4 verified results (2026-09-04)
 
@@ -29,7 +29,7 @@ Last updated: 2026-09-04 (Phase 4 handoff-first UX and landing redesign verified
 - `/app/scenarios/<id>` is a dedicated handoff journey with editable brief, changed constraint, and Agent B task fields; preview, reset, and fixture-run controls; decision stamps; safe outputs; and progressive receipt and evidence details.
 - The scenario interface renders API responses with text nodes, never exposes withheld private or private-derived outputs, and handles loading, stale-generation, failure, reset, and unavailable live-action messaging.
 - The landing page now explains Agent A, the Delta boundary, Agent B, reuse, blocked work, rerun, and the Reuse Receipt. The legacy launch-package routes remain available as migration history and are not the primary call to action.
-- `git diff --check`, Python compilation, and JavaScript syntax checks passed. No live OpenAI, ACP, Base, wallet, funding, settlement, or provider request was made.
+- `git diff --check`, Python compilation, and JavaScript syntax checks passed. No live OpenAI, Base, wallet, funding, settlement, or provider payment request was made in Phase 4; ACP history reconciliation and the approved requirements message are recorded in Phase 5 status.
 
 ## Phase 3 verified results (2026-09-04)
 

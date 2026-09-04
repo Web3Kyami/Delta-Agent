@@ -18,6 +18,7 @@ What exists now:
 - `.venv/bin/python -m pytest -rA` returned `141 passed, 19 subtests passed`.
 - `scripts/live_acp_validation.py status` confirmed the known ACP job `75773` remains `active`, open, and unfunded on Base `8453`.
 - `scripts/live_acp_validation.py reconcile` is now available as a read-only provider-history reconciliation path. It must run successfully before a replacement is considered.
+- With explicit approval, reconciliation ran and confirmed job `75773` is still `open` with no funding, transaction hashes, or deliverable. The approved corrective requirements message returned `success: true`; a follow-up history read still reports `open`.
 - `.venv/bin/python scripts/phase2_mutation_review.py` caught all 8 Phase 2 guard-removal mutations.
 
 What remains unverified: an external OpenAI call and live ACP/Base action for the new handoff path. No external model call was made because credentials and API-spend approval were not available. Phase 5 owns live proof and submission hardening.
